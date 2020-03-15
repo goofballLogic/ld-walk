@@ -21,7 +21,7 @@ const apiWalker = walker.walk(context).from(home);
 ```
 
 I could ask it to find nodes containing @id and dereference them like this:
-```javscript
+```javascript
 const products = apiWalker.walk("catalog products books").toQuery();
 ```
 
