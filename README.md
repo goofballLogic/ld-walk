@@ -25,4 +25,4 @@ I could ask it to find nodes containing @id and dereference them like this:
 const products = apiWalker.walk("catalog products books").toQuery();
 ```
 
-Which would give me back a query object for the books node (or null if the walk failed at any point).
+Which would give me back a query object for the books node (or null if the walk failed at any point). Or alternatively, `toJSON()` would return raw JSON instead.
