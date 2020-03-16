@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/goofballLogic/ld-walk#readme",
   "dependencies": {
-    "cucumber": "^6.0.5"
+    "cucumber": "^6.0.5",
+    "ld-query": "^2.4.0"
   }
 }
