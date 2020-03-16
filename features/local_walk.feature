@@ -4,7 +4,8 @@ Feature: Local walk
     So that I can find nodes which exist in the current document
 
     Background: Load local walk data
-        Given the api "http://test.com/local-walk"
+        Given a walk context "local-walk"
+        And the api "http://test.com/local-walk"
 
     Scenario: a property at the root of the document
         When I walk to "catalog"

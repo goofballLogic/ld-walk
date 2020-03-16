@@ -1,6 +1,8 @@
 {
-    "@vocab": "http://test.com/vocab#",
-    "catalog": {
-        "@type": "@id"
+    "@context": {
+        "@vocab": "http://test.com/vocab#",
+        "catalog": {
+            "@type": "@id"
+        }
     }
 }

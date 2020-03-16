@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "cucumber-js\""
+    "test": "cucumber-js --format-options \"{\\\"snippetInterface\\\": \\\"async-await\\\"}\""
   },
   "repository": {
     "type": "git",
@@ -22,8 +22,16 @@
     "url": "https://github.com/goofballLogic/ld-walk/issues"
   },
   "homepage": "https://github.com/goofballLogic/ld-walk#readme",
-  "dependencies": {
-    "cucumber": "^6.0.5",
+  "devDependencies": {
+    "cucumber": "^6.0.5"
+  },
+  "peerDependencies": {
+    "jsonld": "^3.0.1",
     "ld-query": "^2.4.0"
+  },
+  "dependencies": {
+    "jsonld": "^3.0.1",
+    "ld-query": "^2.4.0",
+    "should": "^13.2.3"
   }
 }
