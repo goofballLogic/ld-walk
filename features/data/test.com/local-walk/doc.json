@@ -1,0 +1,5 @@
+{
+    "@context": "http://test.com/context.jsonld",
+    "@id": "http://test.com/local-walk",
+    "catalog": "http://test.com/local-walk/catalog"
+}

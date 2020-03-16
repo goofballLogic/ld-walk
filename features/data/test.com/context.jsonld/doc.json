@@ -1,0 +1,6 @@
+{
+    "@vocab": "http://test.com/vocab#",
+    "catalog": {
+        "@type": "@id"
+    }
+}
