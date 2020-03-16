@@ -19,7 +19,7 @@ const context = {
 If I initialise the walker like this:
 ```javascript
 import walker from "./Walker.js";
-const apiWalker = walker.from(api);
+const apiWalker = walker.walk(context).from(api);
 ```
 
 I could ask it to find nodes containing @id and dereference them like this:
