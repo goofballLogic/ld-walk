@@ -1,0 +1,28 @@
+{
+  "name": "ld-walk",
+  "version": "0.0.1",
+  "description": "This library provides a few utilities to facilitate resource location within a distributed graph of JSON-LD documents",
+  "main": "src/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "cucumber-js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goofballLogic/ld-walk.git"
+  },
+  "keywords": [
+    "json-ld"
+  ],
+  "author": "goofballLogic",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/goofballLogic/ld-walk/issues"
+  },
+  "homepage": "https://github.com/goofballLogic/ld-walk#readme",
+  "dependencies": {
+    "cucumber": "^6.0.5"
+  }
+}
