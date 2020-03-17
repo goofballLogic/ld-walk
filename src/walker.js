@@ -1,6 +1,15 @@
 const jsonld = require("jsonld");
 const ld = require("ld-query");
 
+/*
+    Given a URL, we want to download the document referenced, expand it and convert it to an ld-query object.
+    Note that we pass in an empty context object. This is because we will make all our queries using fully-qualified terms
+*/
+async function URLtoQuery(url) {
+    const expandedDoc = await jsonld.expand(url);
+    return ld(expandedDoc, {});
+}
+
 async function walkToForQuery(pathContext, walkTo, query) {
 
     // expand the terms we are going to walk
@@ -9,9 +18,31 @@ async function walkToForQuery(pathContext, walkTo, query) {
     // step through until we can't any more
     let stepCount = 0;
     while (query && terms.length) {
+
+        // next term, and note the step
         const term = terms.shift();
         stepCount++;
-        query = query.query(`${term}`);
+
+        // this is the query that ld-query needs to query into the document
+        const termPath = `> ${term}`;
+        let nextQuery = query.query(termPath);
+
+        // not found - could be remote?
+        if (!nextQuery) {
+            const maybeId = query.query("> @id");
+            if(maybeId) {
+
+                // try dereferencing this
+                const fetched = await URLtoQuery(maybeId);
+                nextQuery = fetched && fetched.query(termPath);
+
+            }
+
+        }
+
+        // At this point the query is either populated, or is null (in which case the walk will terminate)
+        query = nextQuery;
+
     }
 
     /*
@@ -51,7 +82,7 @@ async function walkToForQuery(pathContext, walkTo, query) {
             We anticipate that if someone fails the walk, they will want to know if it failed
             part of the way through which bits remained unwalked.
         */
-        result.notWalked = unexpandedTerms.slice(stepCount, 1);
+        result.notWalked = unexpandedTerms.slice(stepCount);
     }
     return result;
 
@@ -60,8 +91,7 @@ async function walkToForQuery(pathContext, walkTo, query) {
 async function walkTo(pathContext, walkFrom, walkTo) {
 
     // fetch the starting point document
-    const expandedDoc = await jsonld.expand(walkFrom);
-    let query = ld(expandedDoc, {});
+    let query = await URLtoQuery(walkFrom);
 
     // attempt to step through
     return walkToForQuery(pathContext, walkTo, query);

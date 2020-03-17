@@ -2,8 +2,10 @@
     "@context": {
         "@vocab": "http://test.com/vocab#",
         "so": "http://schema.org/",
-        "catalog": {
-            "@type": "@id"
-        }
+        "catalog": { "@type": "@id", "@id": "catalog" },
+        "groceries": { "@type": "@id", "@id": "groceries" },
+        "alcohol": { "@type": "@id", "@id": "alcohol" },
+        "fruit": { "@type": "@id", "@id": "fruit" },
+        "vegetables": { "@type": "@id", "@id": "vegetables" }
     }
 }
