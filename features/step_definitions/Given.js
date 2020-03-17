@@ -22,3 +22,8 @@ Given('a walk context {string}', async function (contextName) {
     const contextPath = path.resolve(__dirname, `../data/walk-contexts/${contextName}.json`);
     this.walkContext = JSON.parse(fs.readFileSync(contextPath).toString());
 });
+
+Given('a query context {string}', async function (contextName) {
+    const contextPath = path.resolve(__dirname, `../data/query-contexts/${contextName}/doc.json`);
+    this.queryContext = JSON.parse(fs.readFileSync(contextPath).toString());
+});

@@ -1,6 +1,7 @@
 {
     "@context": {
         "@vocab": "http://test.com/vocab#",
+        "so": "http://schema.org/",
         "catalog": {
             "@type": "@id"
         }

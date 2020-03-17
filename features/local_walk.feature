@@ -11,3 +11,8 @@ Feature: Local walk
         When I walk to "catalog"
         And I query the result for "> @id"
         Then the result should be "http://test.com/local-walk/catalog"
+
+    Scenario: a property nested within the document
+        When I walk to "department products"
+        And I query the result for "> @id"
+        Then the result should be "http://test.com/local-walk/department/products"
