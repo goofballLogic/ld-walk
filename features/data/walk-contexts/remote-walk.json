@@ -1,3 +1,4 @@
 {
-    "@vocab": "http://test.com/vocab#"
+    "@vocab": "http://test.com/vocab#",
+    "name": "http://schema.org/name"
 }

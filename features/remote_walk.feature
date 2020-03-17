@@ -7,7 +7,12 @@ Feature: Local walk
         Given a walk context "remote-walk"
         And the api "http://test.com/remote-walk"
 
-    Scenario: a property at the root of the document
+    Scenario: the @id of a document one hop away
         When I walk to "catalog groceries fruit"
         And I query the result for "> @id"
         Then the result should be "http://test.com/remote-walk/catalog/fruit"
+
+    Scenario: the name of a document two hops away
+        When I walk to "catalog groceries fruit"
+        And I query the result for "> name @value"
+        Then the result should be "Fruit"

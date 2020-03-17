@@ -1,0 +1,10 @@
+{
+    "@context": [
+        "http://test.com/context.jsonld",
+        {
+            "@base": "http://test.com/remote-walk/catalog/"
+        }
+    ],
+    "@id": "./fruit",
+    "so:name": "Fruit"
+}
