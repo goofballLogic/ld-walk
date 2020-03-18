@@ -2,7 +2,8 @@ const { When } = require("cucumber");
 const walker = require("../../src/walker");
 
 When('I walk to {string}', async function (path) {
-    this.result = await walker.walk(this.walkContext).from(this.walkFrom).to(path);
+    const { walkContext, walkFrom, walkOptions } = this;
+    this.result = await walker.walk(walkContext).from(walkFrom).to(path, walkOptions);
 });
 
 When('I query the result for {string}', async function (query) {

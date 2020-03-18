@@ -6,18 +6,45 @@ const ld = require("ld-query");
     Note that we pass in an empty context object. This is because we will make all our queries using fully-qualified terms
 */
 async function URLtoQuery(url) {
-    const expandedDoc = await jsonld.expand(url);
-    return ld(expandedDoc, {});
+    try {
+        const expandedDoc = await jsonld.expand(url);
+        return ld(expandedDoc, {});
+
+    } catch(err) {
+
+        if(err.details && err.details.code == "loading document failed")
+            return null;
+
+        throw err;
+
+    }
 }
 
-async function walkToForQuery(pathContext, walkTo, query) {
+/*
+    This will execute a walk, starting from a walkFrom URL (if specified). If not specified,
+    lastFetched and query must be specified so that the walk can be resumed from that point.
+
+    walkTo is the definition of the path to walk
+
+    lastFetched and query, if specified, are the last URL which we dereferenced when the previous
+    walk completed, and the query we ended on, respectively
+*/
+async function executeWalk({ pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing }) {
 
     // expand the terms we are going to walk
     const terms = await expandWalkToTerms(pathContext, walkTo);
 
+    // fetch the starting point document if needed
+    if(!lastFetched) {
+
+        query = await URLtoQuery(walkFrom);
+        lastFetched = walkFrom;
+
+    }
+
     // step through until we can't any more
     let stepCount = 0;
-    while (query && terms.length) {
+    while (query && query.query && terms.length) {
 
         // next term, and note the step
         const term = terms.shift();
@@ -33,6 +60,7 @@ async function walkToForQuery(pathContext, walkTo, query) {
             if(maybeId) {
 
                 // try dereferencing this
+                lastFetched = maybeId;
                 const fetched = await URLtoQuery(maybeId);
                 nextQuery = fetched && fetched.query(termPath);
 
@@ -46,9 +74,25 @@ async function walkToForQuery(pathContext, walkTo, query) {
     }
 
     /*
+        at the end of the walk, we check to see where we are and if we ever dereferenced the @id (if any)
+        This can be suppressed using the suppressFinalDereferencing switch
+    */
+    if(!suppressFinalDereferencing && query && query.query) {
+
+        const finalId = query.query("> @id");
+        if(finalId && finalId !== lastFetched) {
+
+            query = await URLtoQuery(finalId) || query;
+
+        }
+
+    }
+
+    /*
         For diagnostic purposes we'll prepare an array of unexpanded path step names
     */
-   const unexpandedTerms = walkTo.split(" ");
+    const unexpandedTerms = walkTo.split(" ");
+
     /*
         This is the result from the walk with various choices for proceeding
     */
@@ -65,9 +109,13 @@ async function walkToForQuery(pathContext, walkTo, query) {
         toQuery: (maybeContext) => query && ld(query.json(), maybeContext || {}),
         /*
             This allows the consumer to continue walking from the point where they left off.
-            If there was no query at the stopping point, this will return null right away
+            If there was no query at the stopping point, this will return the same result object
+            that this was called on (to allow chaining)
         */
-        continueTo: nextWalkTo => query && walkToForQuery(pathContext, nextWalkTo, query),
+        continueTo: (nextWalkTo, nextOptions) => query
+            ? executeWalk({ ...nextOptions, pathContext, walkTo: nextWalkTo, lastFetched, query })
+            : result,
+
         /*
             If we didn't end up with a populated ld-query, it means the walk failed to find anything,
             either because it was aborted part of the way through, or because the final step resulted
@@ -88,15 +136,6 @@ async function walkToForQuery(pathContext, walkTo, query) {
 
 }
 
-async function walkTo(pathContext, walkFrom, walkTo) {
-
-    // fetch the starting point document
-    let query = await URLtoQuery(walkFrom);
-
-    // attempt to step through
-    return walkToForQuery(pathContext, walkTo, query);
-}
-
 async function expandWalkToTerms(pathContext, walkTo) {
     const expansionDocument = {
         "@context": pathContext,
@@ -112,7 +151,7 @@ function walkFrom(pathContext, walkFrom) {
     return {
         pathContext: pathContext,
         walkFrom: walkFrom,
-        to: walkTo.bind(this, pathContext, walkFrom)
+        to: (walkTo, options) => executeWalk({ ...options, pathContext, walkFrom, walkTo })
     };
 }
 
