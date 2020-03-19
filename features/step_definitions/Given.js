@@ -1,7 +1,10 @@
-const fs = require("fs");
-const path = require("path");
-const { Before, After, Given } = require("cucumber");
-const jsonld = require("jsonld");
+import fs from "fs";
+import path from "path";
+import { Before, Given } from "cucumber";
+import jsonld from "jsonld";
+import ldquery from "ld-query";
+
+const dependencies = { jsonld, "ld-query": ldquery };
 
 const urls = [];
 
@@ -29,8 +32,9 @@ jsonld.documentLoader = function(url) {
 };
 
 Before(function() {
-    urls.splice(0);
+    this.dependencies = dependencies;
     this.urls = urls;
+    urls.splice(0);
 });
 
 Given('the api {string}', async function (walkFrom) {

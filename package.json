@@ -7,8 +7,12 @@
     "test": "test"
   },
   "scripts": {
-    "test": "cucumber-js --format-options \"{\\\"snippetInterface\\\": \\\"async-await\\\"}\"",
-    "build": "babel src --out-file dist/walker.js && babel src --out-file dist/walker.min.js --presets=minify"
+    "test": "cucumber-js --format-options \"{\\\"snippetInterface\\\": \\\"async-await\\\"}\" --require-module @babel/register --require-module regenerator-runtime",
+    "build": "npm run build-es6m && npm run build-es6m-min && npm run build-es5 && npm run build-es5-min",
+    "build-es6m": "babel src --out-file dist/walker.js --config-file ./build/.bablerc-es6m",
+    "build-es6m-min": "babel src --out-file dist/walker.min.js --config-file ./build/.bablerc-es6m-min",
+    "build-es5": "babel src --out-file dist/walker.umd.js  --config-file ./build/.bablerc-es5-umd",
+    "build-es5-min": "babel src --out-file dist/walker.umd.min.js  --config-file ./build/.bablerc-es5-umd-min"
   },
   "repository": {
     "type": "git",
@@ -27,8 +31,10 @@
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.7",
     "@babel/preset-env": "^7.8.7",
+    "@babel/register": "^7.8.6",
     "babel-preset-minify": "^0.5.1",
-    "cucumber": "^6.0.5"
+    "cucumber": "^6.0.5",
+    "regenerator-runtime": "^0.13.5"
   },
   "peerDependencies": {
     "jsonld": "^3.0.1",
@@ -38,5 +44,6 @@
     "jsonld": "^3.0.1",
     "ld-query": "^2.4.0",
     "should": "^13.2.3"
-  }
+  },
+  "type": "module"
 }

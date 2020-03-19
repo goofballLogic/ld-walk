@@ -1,0 +1,11 @@
+{
+    "env": {
+        "es6m": {
+            "comments": false
+        },
+        "es6m-min": {
+            "presets": [ "minify" ]
+            "comments": false
+        }
+    }
+}

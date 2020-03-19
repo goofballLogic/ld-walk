@@ -1,9 +1,9 @@
-module.exports = {
+const walker = {
 
     walk(pathContext, dependencies = {}) {
 
-        const jsonld = dependencies.jsonld || require("jsonld");
-        const ld = dependencies.ldQuery || require("ld-query");
+        const jsonld = dependencies.jsonld;
+        const ld = dependencies["ld-query"];
 
         return {
             pathContext: pathContext,
@@ -165,3 +165,5 @@ module.exports = {
         }
     }
 };
+
+export default walker;

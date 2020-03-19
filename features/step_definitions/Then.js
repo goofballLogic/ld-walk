@@ -1,5 +1,5 @@
-require("should");
-const { Then } = require("cucumber");
+import "should";
+import { Then }  from "cucumber";
 
 Then('the result should be {string}', async function (expected) {
     should.exist(this.queryResult, "Query returned nothing");

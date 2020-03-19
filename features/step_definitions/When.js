@@ -1,9 +1,9 @@
-const { When } = require("cucumber");
-const walker = require("../../src/walker");
+import walker from "../../src/walker";
+import { When } from "cucumber";
 
 When('I walk to {string}', async function (path) {
-    const { walkContext, walkFrom, walkOptions } = this;
-    this.result = await walker.walk(walkContext).from(walkFrom).to(path, walkOptions);
+    const { walkContext, walkFrom, walkOptions, dependencies } = this;
+    this.result = await walker.walk(walkContext, dependencies).from(walkFrom).to(path, walkOptions);
 });
 
 When('I query the result for {string}', async function (query) {
