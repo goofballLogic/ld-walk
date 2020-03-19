@@ -1,8 +1,14 @@
-import fs from "fs";
-import path from "path";
-import { Before, Given } from "cucumber";
-import jsonld from "jsonld";
-import ldquery from "ld-query";
+// import fs from "fs";
+// import path from "path";
+// import { Before, Given } from "cucumber";
+// import jsonld from "jsonld";
+// import ldquery from "ld-query";
+
+const fs = require("fs");
+const path = require("path");
+const { Before, Given } = require("cucumber");
+const jsonld = require("jsonld");
+const ldquery = require("ld-query");
 
 const dependencies = { jsonld, "ld-query": ldquery };
 

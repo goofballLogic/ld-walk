@@ -1,6 +1,0 @@
-{
-    "presets": [
-        "minify"
-    ],
-    "comments": false
-}

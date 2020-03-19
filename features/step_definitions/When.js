@@ -1,5 +1,5 @@
-import walker from "../../src/walker";
-import { When } from "cucumber";
+const walker = require("../../dist/walker.umd");
+const { When } = require("cucumber");
 
 When('I walk to {string}', async function (path) {
     const { walkContext, walkFrom, walkOptions, dependencies } = this;
