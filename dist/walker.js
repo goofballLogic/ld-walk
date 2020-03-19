@@ -25,6 +25,7 @@ const walker = {
       query,
       suppressFinalDereferencing
     }) {
+      if (!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
       const terms = await expandWalkToTerms(pathContext, walkTo);
 
       if (!lastFetched) {
@@ -61,9 +62,8 @@ const walker = {
         }
       }
 
-      const unexpandedTerms = walkTo.split(" ");
       const result = {
-        walked: unexpandedTerms.slice(0, stepCount),
+        walked: walkTo.slice(0, stepCount),
         toQuery: maybeContext => query && ld(query.json(), maybeContext || {}),
         continueTo: (nextWalkTo, nextOptions) => query ? executeWalk({ ...nextOptions,
           pathContext,
@@ -75,7 +75,7 @@ const walker = {
       };
 
       if (!result.succeeded) {
-        result.notWalked = unexpandedTerms.slice(stepCount);
+        result.notWalked = walkTo.slice(stepCount);
       }
 
       return result;
@@ -84,7 +84,7 @@ const walker = {
     async function expandWalkToTerms(pathContext, walkTo) {
       const expansionDocument = {
         "@context": pathContext,
-        "@graph": walkTo.split(" ").map(function (t) {
+        "@graph": walkTo.map(function (t) {
           return {
             [t]: []
           };

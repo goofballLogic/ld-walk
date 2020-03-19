@@ -33,12 +33,15 @@ const walker = {
             This will execute a walk, starting from a walkFrom URL (if specified). If not specified,
             lastFetched and query must be specified so that the walk can be resumed from that point.
 
-            walkTo is the definition of the path to walk
+            walkTo is the definition of the path to walk (a string, or an array of strings)
 
             lastFetched and query, if specified, are the last URL which we dereferenced when the previous
             walk completed, and the query we ended on, respectively
         */
         async function executeWalk({ pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing }) {
+
+            // if necessary convert walkTo to an array
+            if(!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
 
             // expand the terms we are going to walk
             const terms = await expandWalkToTerms(pathContext, walkTo);
@@ -98,11 +101,6 @@ const walker = {
             }
 
             /*
-                For diagnostic purposes we'll prepare an array of unexpanded path step names
-            */
-            const unexpandedTerms = walkTo.split(" ");
-
-            /*
                 This is the result from the walk with various choices for proceeding
             */
             const result = {
@@ -111,7 +109,7 @@ const walker = {
                     were walked, the query still may not have succeeded if the final step took us to a
                     null document
                 */
-                walked: unexpandedTerms.slice(0, stepCount),
+                walked: walkTo.slice(0, stepCount),
                 /*
                     Takes the output of the current walk and converts it to an ldquery object
                 */
@@ -139,7 +137,7 @@ const walker = {
                     We anticipate that if someone fails the walk, they will want to know if it failed
                     part of the way through which bits remained unwalked.
                 */
-                result.notWalked = unexpandedTerms.slice(stepCount);
+                result.notWalked = walkTo.slice(stepCount);
             }
             return result;
 
@@ -148,7 +146,7 @@ const walker = {
         async function expandWalkToTerms(pathContext, walkTo) {
             const expansionDocument = {
                 "@context": pathContext,
-                "@graph": walkTo.split(" ").map(function (t) {
+                "@graph": walkTo.map(function (t) {
                     return { [t]: [] }; // a document containing the term with an array containing no values
                 })
             };

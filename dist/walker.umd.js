@@ -524,6 +524,18 @@
 	  }
 	};
 
+	// `IsArray` abstract operation
+	// https://tc39.github.io/ecma262/#sec-isarray
+	var isArray = Array.isArray || function isArray(arg) {
+	  return classofRaw(arg) == 'Array';
+	};
+
+	// `Array.isArray` method
+	// https://tc39.github.io/ecma262/#sec-array.isarray
+	_export({ target: 'Array', stat: true }, {
+	  isArray: isArray
+	});
+
 	var aFunction$1 = function (it) {
 	  if (typeof it != 'function') {
 	    throw TypeError(String(it) + ' is not a function');
@@ -557,12 +569,6 @@
 	// https://tc39.github.io/ecma262/#sec-toobject
 	var toObject = function (argument) {
 	  return Object(requireObjectCoercible(argument));
-	};
-
-	// `IsArray` abstract operation
-	// https://tc39.github.io/ecma262/#sec-isarray
-	var isArray = Array.isArray || function isArray(arg) {
-	  return classofRaw(arg) == 'Array';
 	};
 
 	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails(function () {
@@ -2153,36 +2159,37 @@
 
 	    function _executeWalk() {
 	      _executeWalk = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(_ref) {
-	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, terms, stepCount, term, termPath, nextQuery, maybeId, fetched, finalId, unexpandedTerms, result;
+	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, terms, stepCount, term, termPath, nextQuery, maybeId, fetched, finalId, result;
 	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
 	          while (1) {
 	            switch (_context2.prev = _context2.next) {
 	              case 0:
 	                pathContext = _ref.pathContext, walkFrom = _ref.walkFrom, walkTo = _ref.walkTo, lastFetched = _ref.lastFetched, query = _ref.query, suppressFinalDereferencing = _ref.suppressFinalDereferencing;
-	                _context2.next = 3;
+	                if (!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
+	                _context2.next = 4;
 	                return expandWalkToTerms(pathContext, walkTo);
 
-	              case 3:
+	              case 4:
 	                terms = _context2.sent;
 
 	                if (lastFetched) {
-	                  _context2.next = 9;
+	                  _context2.next = 10;
 	                  break;
 	                }
 
-	                _context2.next = 7;
+	                _context2.next = 8;
 	                return URLtoQuery(walkFrom);
 
-	              case 7:
+	              case 8:
 	                query = _context2.sent;
 	                lastFetched = walkFrom;
 
-	              case 9:
+	              case 10:
 	                stepCount = 0;
 
-	              case 10:
+	              case 11:
 	                if (!(query && query.query && terms.length)) {
-	                  _context2.next = 26;
+	                  _context2.next = 27;
 	                  break;
 	                }
 
@@ -2192,63 +2199,62 @@
 	                nextQuery = query.query(termPath);
 
 	                if (nextQuery) {
-	                  _context2.next = 23;
+	                  _context2.next = 24;
 	                  break;
 	                }
 
 	                maybeId = query.query("> @id");
 
 	                if (!maybeId) {
-	                  _context2.next = 23;
+	                  _context2.next = 24;
 	                  break;
 	                }
 
 	                lastFetched = maybeId;
-	                _context2.next = 21;
+	                _context2.next = 22;
 	                return URLtoQuery(maybeId);
 
-	              case 21:
+	              case 22:
 	                fetched = _context2.sent;
 	                nextQuery = fetched && fetched.query(termPath);
 
-	              case 23:
+	              case 24:
 	                query = nextQuery;
-	                _context2.next = 10;
+	                _context2.next = 11;
 	                break;
 
-	              case 26:
+	              case 27:
 	                if (!(!suppressFinalDereferencing && query && query.query)) {
-	                  _context2.next = 35;
+	                  _context2.next = 36;
 	                  break;
 	                }
 
 	                finalId = query.query("> @id");
 
 	                if (!(finalId && finalId !== lastFetched)) {
-	                  _context2.next = 35;
+	                  _context2.next = 36;
 	                  break;
 	                }
 
-	                _context2.next = 31;
+	                _context2.next = 32;
 	                return URLtoQuery(finalId);
 
-	              case 31:
+	              case 32:
 	                _context2.t0 = _context2.sent;
 
 	                if (_context2.t0) {
-	                  _context2.next = 34;
+	                  _context2.next = 35;
 	                  break;
 	                }
 
 	                _context2.t0 = query;
 
-	              case 34:
+	              case 35:
 	                query = _context2.t0;
 
-	              case 35:
-	                unexpandedTerms = walkTo.split(" ");
+	              case 36:
 	                result = {
-	                  walked: unexpandedTerms.slice(0, stepCount),
+	                  walked: walkTo.slice(0, stepCount),
 	                  toQuery: function toQuery(maybeContext) {
 	                    return query && ld(query.json(), maybeContext || {});
 	                  },
@@ -2264,7 +2270,7 @@
 	                };
 
 	                if (!result.succeeded) {
-	                  result.notWalked = unexpandedTerms.slice(stepCount);
+	                  result.notWalked = walkTo.slice(stepCount);
 	                }
 
 	                return _context2.abrupt("return", result);
@@ -2292,7 +2298,7 @@
 	              case 0:
 	                expansionDocument = {
 	                  "@context": pathContext,
-	                  "@graph": walkTo.split(" ").map(function (t) {
+	                  "@graph": walkTo.map(function (t) {
 	                    return _defineProperty({}, t, []);
 	                  })
 	                };
