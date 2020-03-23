@@ -822,22 +822,6 @@
 	  bind: functionBind
 	});
 
-	// `Object.keys` method
-	// https://tc39.github.io/ecma262/#sec-object.keys
-	var objectKeys = Object.keys || function keys(O) {
-	  return objectKeysInternal(O, enumBugKeys);
-	};
-
-	var FAILS_ON_PRIMITIVES = fails(function () { objectKeys(1); });
-
-	// `Object.keys` method
-	// https://tc39.github.io/ecma262/#sec-object.keys
-	_export({ target: 'Object', stat: true, forced: FAILS_ON_PRIMITIVES }, {
-	  keys: function keys(it) {
-	    return objectKeys(toObject(it));
-	  }
-	});
-
 	// `RegExp.prototype.flags` getter implementation
 	// https://tc39.github.io/ecma262/#sec-get-regexp.prototype.flags
 	var regexpFlags = function () {
@@ -965,6 +949,68 @@
 	  exec: regexpExec
 	});
 
+	var MATCH = wellKnownSymbol('match');
+
+	// `IsRegExp` abstract operation
+	// https://tc39.github.io/ecma262/#sec-isregexp
+	var isRegexp = function (it) {
+	  var isRegExp;
+	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
+	};
+
+	var notARegexp = function (it) {
+	  if (isRegexp(it)) {
+	    throw TypeError("The method doesn't accept regular expressions");
+	  } return it;
+	};
+
+	var MATCH$1 = wellKnownSymbol('match');
+
+	var correctIsRegexpLogic = function (METHOD_NAME) {
+	  var regexp = /./;
+	  try {
+	    '/./'[METHOD_NAME](regexp);
+	  } catch (e) {
+	    try {
+	      regexp[MATCH$1] = false;
+	      return '/./'[METHOD_NAME](regexp);
+	    } catch (f) { /* empty */ }
+	  } return false;
+	};
+
+	var getOwnPropertyDescriptor$2 = objectGetOwnPropertyDescriptor.f;
+
+
+
+
+
+
+	var nativeEndsWith = ''.endsWith;
+	var min$2 = Math.min;
+
+	var CORRECT_IS_REGEXP_LOGIC = correctIsRegexpLogic('endsWith');
+	// https://github.com/zloirock/core-js/pull/702
+	var MDN_POLYFILL_BUG =  !CORRECT_IS_REGEXP_LOGIC && !!function () {
+	  var descriptor = getOwnPropertyDescriptor$2(String.prototype, 'endsWith');
+	  return descriptor && !descriptor.writable;
+	}();
+
+	// `String.prototype.endsWith` method
+	// https://tc39.github.io/ecma262/#sec-string.prototype.endswith
+	_export({ target: 'String', proto: true, forced: !MDN_POLYFILL_BUG && !CORRECT_IS_REGEXP_LOGIC }, {
+	  endsWith: function endsWith(searchString /* , endPosition = @length */) {
+	    var that = String(requireObjectCoercible(this));
+	    notARegexp(searchString);
+	    var endPosition = arguments.length > 1 ? arguments[1] : undefined;
+	    var len = toLength(that.length);
+	    var end = endPosition === undefined ? len : min$2(toLength(endPosition), len);
+	    var search = String(searchString);
+	    return nativeEndsWith
+	      ? nativeEndsWith.call(that, search, end)
+	      : that.slice(end - search.length, end) === search;
+	  }
+	});
+
 	// TODO: Remove from `core-js@4` since it's moved to entry points
 
 
@@ -1090,15 +1136,6 @@
 	  if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	};
 
-	var MATCH = wellKnownSymbol('match');
-
-	// `IsRegExp` abstract operation
-	// https://tc39.github.io/ecma262/#sec-isregexp
-	var isRegexp = function (it) {
-	  var isRegExp;
-	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
-	};
-
 	var SPECIES$4 = wellKnownSymbol('species');
 
 	// `SpeciesConstructor` abstract operation
@@ -1162,7 +1199,7 @@
 	};
 
 	var arrayPush = [].push;
-	var min$2 = Math.min;
+	var min$3 = Math.min;
 	var MAX_UINT32 = 0xFFFFFFFF;
 
 	// babel-minify transpiles RegExp('x', 'y') -> /x/y and it causes SyntaxError
@@ -1265,7 +1302,7 @@
 	        var e;
 	        if (
 	          z === null ||
-	          (e = min$2(toLength(splitter.lastIndex + (SUPPORTS_Y ? 0 : q)), S.length)) === p
+	          (e = min$3(toLength(splitter.lastIndex + (SUPPORTS_Y ? 0 : q)), S.length)) === p
 	        ) {
 	          q = advanceStringIndex(S, q, unicodeMatching);
 	        } else {
@@ -1284,90 +1321,36 @@
 	  ];
 	}, !SUPPORTS_Y);
 
-	function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
-	  try {
-	    var info = gen[key](arg);
-	    var value = info.value;
-	  } catch (error) {
-	    reject(error);
-	    return;
+	var getOwnPropertyDescriptor$3 = objectGetOwnPropertyDescriptor.f;
+
+
+
+
+
+
+	var nativeStartsWith = ''.startsWith;
+	var min$4 = Math.min;
+
+	var CORRECT_IS_REGEXP_LOGIC$1 = correctIsRegexpLogic('startsWith');
+	// https://github.com/zloirock/core-js/pull/702
+	var MDN_POLYFILL_BUG$1 =  !CORRECT_IS_REGEXP_LOGIC$1 && !!function () {
+	  var descriptor = getOwnPropertyDescriptor$3(String.prototype, 'startsWith');
+	  return descriptor && !descriptor.writable;
+	}();
+
+	// `String.prototype.startsWith` method
+	// https://tc39.github.io/ecma262/#sec-string.prototype.startswith
+	_export({ target: 'String', proto: true, forced: !MDN_POLYFILL_BUG$1 && !CORRECT_IS_REGEXP_LOGIC$1 }, {
+	  startsWith: function startsWith(searchString /* , position = 0 */) {
+	    var that = String(requireObjectCoercible(this));
+	    notARegexp(searchString);
+	    var index = toLength(min$4(arguments.length > 1 ? arguments[1] : undefined, that.length));
+	    var search = String(searchString);
+	    return nativeStartsWith
+	      ? nativeStartsWith.call(that, search, index)
+	      : that.slice(index, index + search.length) === search;
 	  }
-
-	  if (info.done) {
-	    resolve(value);
-	  } else {
-	    Promise.resolve(value).then(_next, _throw);
-	  }
-	}
-
-	function _asyncToGenerator(fn) {
-	  return function () {
-	    var self = this,
-	        args = arguments;
-	    return new Promise(function (resolve, reject) {
-	      var gen = fn.apply(self, args);
-
-	      function _next(value) {
-	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
-	      }
-
-	      function _throw(err) {
-	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
-	      }
-
-	      _next(undefined);
-	    });
-	  };
-	}
-
-	function _defineProperty(obj, key, value) {
-	  if (key in obj) {
-	    Object.defineProperty(obj, key, {
-	      value: value,
-	      enumerable: true,
-	      configurable: true,
-	      writable: true
-	    });
-	  } else {
-	    obj[key] = value;
-	  }
-
-	  return obj;
-	}
-
-	function ownKeys$1(object, enumerableOnly) {
-	  var keys = Object.keys(object);
-
-	  if (Object.getOwnPropertySymbols) {
-	    var symbols = Object.getOwnPropertySymbols(object);
-	    if (enumerableOnly) symbols = symbols.filter(function (sym) {
-	      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-	    });
-	    keys.push.apply(keys, symbols);
-	  }
-
-	  return keys;
-	}
-
-	function _objectSpread2(target) {
-	  for (var i = 1; i < arguments.length; i++) {
-	    var source = arguments[i] != null ? arguments[i] : {};
-
-	    if (i % 2) {
-	      ownKeys$1(Object(source), true).forEach(function (key) {
-	        _defineProperty(target, key, source[key]);
-	      });
-	    } else if (Object.getOwnPropertyDescriptors) {
-	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-	    } else {
-	      ownKeys$1(Object(source)).forEach(function (key) {
-	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-	      });
-	    }
-	  }
-
-	  return target;
-	}
+	});
 
 	var runtime_1 = createCommonjsModule(function (module) {
 	/**
@@ -2100,6 +2083,91 @@
 	}
 	});
 
+	function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+	  try {
+	    var info = gen[key](arg);
+	    var value = info.value;
+	  } catch (error) {
+	    reject(error);
+	    return;
+	  }
+
+	  if (info.done) {
+	    resolve(value);
+	  } else {
+	    Promise.resolve(value).then(_next, _throw);
+	  }
+	}
+
+	function _asyncToGenerator(fn) {
+	  return function () {
+	    var self = this,
+	        args = arguments;
+	    return new Promise(function (resolve, reject) {
+	      var gen = fn.apply(self, args);
+
+	      function _next(value) {
+	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+	      }
+
+	      function _throw(err) {
+	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
+	      }
+
+	      _next(undefined);
+	    });
+	  };
+	}
+
+	function _defineProperty(obj, key, value) {
+	  if (key in obj) {
+	    Object.defineProperty(obj, key, {
+	      value: value,
+	      enumerable: true,
+	      configurable: true,
+	      writable: true
+	    });
+	  } else {
+	    obj[key] = value;
+	  }
+
+	  return obj;
+	}
+
+	function ownKeys$1(object, enumerableOnly) {
+	  var keys = Object.keys(object);
+
+	  if (Object.getOwnPropertySymbols) {
+	    var symbols = Object.getOwnPropertySymbols(object);
+	    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+	      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+	    });
+	    keys.push.apply(keys, symbols);
+	  }
+
+	  return keys;
+	}
+
+	function _objectSpread2(target) {
+	  for (var i = 1; i < arguments.length; i++) {
+	    var source = arguments[i] != null ? arguments[i] : {};
+
+	    if (i % 2) {
+	      ownKeys$1(Object(source), true).forEach(function (key) {
+	        _defineProperty(target, key, source[key]);
+	      });
+	    } else if (Object.getOwnPropertyDescriptors) {
+	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+	    } else {
+	      ownKeys$1(Object(source)).forEach(function (key) {
+	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+	      });
+	    }
+	  }
+
+	  return target;
+	}
+
 	var walker = {
 	  walk: function walk(pathContext) {
 	    var dependencies = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -2109,6 +2177,10 @@
 	      pathContext: pathContext,
 	      from: walkFrom.bind(this, pathContext)
 	    };
+
+	    function initializeQueryForWalking(expanded) {
+	      return ld(expanded, {});
+	    }
 
 	    function URLtoQuery(_x) {
 	      return _URLtoQuery.apply(this, arguments);
@@ -2127,7 +2199,7 @@
 
 	              case 3:
 	                expandedDoc = _context.sent;
-	                return _context.abrupt("return", ld(expandedDoc, {}));
+	                return _context.abrupt("return", initializeQueryForWalking(expandedDoc));
 
 	              case 7:
 	                _context.prev = 7;
@@ -2159,7 +2231,7 @@
 
 	    function _executeWalk() {
 	      _executeWalk = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(_ref) {
-	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, terms, stepCount, term, termPath, nextQuery, maybeId, fetched, finalId, result;
+	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, steps, stepCount, step, nextQuery, term, termPath, maybeId, fetched, temporaryQuery, queryResult, queryParent, finalId, result;
 	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
 	          while (1) {
 	            switch (_context2.prev = _context2.next) {
@@ -2167,10 +2239,10 @@
 	                pathContext = _ref.pathContext, walkFrom = _ref.walkFrom, walkTo = _ref.walkTo, lastFetched = _ref.lastFetched, query = _ref.query, suppressFinalDereferencing = _ref.suppressFinalDereferencing;
 	                if (!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
 	                _context2.next = 4;
-	                return expandWalkToTerms(pathContext, walkTo);
+	                return expandWalkToSteps(pathContext, walkTo);
 
 	              case 4:
-	                terms = _context2.sent;
+	                steps = _context2.sent;
 
 	                if (lastFetched) {
 	                  _context2.next = 10;
@@ -2188,71 +2260,99 @@
 	                stepCount = 0;
 
 	              case 11:
-	                if (!(query && query.query && terms.length)) {
-	                  _context2.next = 27;
+	                if (!(query && query.query && steps.length)) {
+	                  _context2.next = 40;
 	                  break;
 	                }
 
-	                term = terms.shift();
+	                step = steps.shift();
 	                stepCount++;
+	                nextQuery = void 0;
+
+	                if (!("term" in step)) {
+	                  _context2.next = 29;
+	                  break;
+	                }
+
+	                term = step["term"];
 	                termPath = "> ".concat(term);
 	                nextQuery = query.query(termPath);
 
 	                if (nextQuery) {
-	                  _context2.next = 24;
+	                  _context2.next = 27;
 	                  break;
 	                }
 
 	                maybeId = query.query("> @id");
 
 	                if (!maybeId) {
-	                  _context2.next = 24;
+	                  _context2.next = 27;
 	                  break;
 	                }
 
 	                lastFetched = maybeId;
-	                _context2.next = 22;
+	                _context2.next = 25;
 	                return URLtoQuery(maybeId);
 
-	              case 22:
+	              case 25:
 	                fetched = _context2.sent;
 	                nextQuery = fetched && fetched.query(termPath);
 
-	              case 24:
+	              case 27:
+	                _context2.next = 37;
+	                break;
+
+	              case 29:
+	                if (!("query" in step)) {
+	                  _context2.next = 36;
+	                  break;
+	                }
+
+	                temporaryQuery = ld(query.json(), pathContext);
+	                queryResult = temporaryQuery.query(step.query);
+	                queryParent = queryResult && queryResult.parent();
+	                nextQuery = queryParent && initializeQueryForWalking(queryParent.json());
+	                _context2.next = 37;
+	                break;
+
+	              case 36:
+	                throw new Error("Unhandled step: " + JSON.stringify(step));
+
+	              case 37:
 	                query = nextQuery;
 	                _context2.next = 11;
 	                break;
 
-	              case 27:
+	              case 40:
 	                if (!(!suppressFinalDereferencing && query && query.query)) {
-	                  _context2.next = 36;
+	                  _context2.next = 49;
 	                  break;
 	                }
 
 	                finalId = query.query("> @id");
 
 	                if (!(finalId && finalId !== lastFetched)) {
-	                  _context2.next = 36;
+	                  _context2.next = 49;
 	                  break;
 	                }
 
-	                _context2.next = 32;
+	                _context2.next = 45;
 	                return URLtoQuery(finalId);
 
-	              case 32:
+	              case 45:
 	                _context2.t0 = _context2.sent;
 
 	                if (_context2.t0) {
-	                  _context2.next = 35;
+	                  _context2.next = 48;
 	                  break;
 	                }
 
 	                _context2.t0 = query;
 
-	              case 35:
+	              case 48:
 	                query = _context2.t0;
 
-	              case 36:
+	              case 49:
 	                result = {
 	                  walked: walkTo.slice(0, stepCount),
 	                  toQuery: function toQuery(maybeContext) {
@@ -2275,7 +2375,7 @@
 
 	                return _context2.abrupt("return", result);
 
-	              case 39:
+	              case 52:
 	              case "end":
 	                return _context2.stop();
 	            }
@@ -2285,21 +2385,41 @@
 	      return _executeWalk.apply(this, arguments);
 	    }
 
-	    function expandWalkToTerms(_x3, _x4) {
-	      return _expandWalkToTerms.apply(this, arguments);
+	    function parseQuery(term) {
+	      if (!(term && term.startsWith("query["))) return;
+	      if (!term.endsWith("]")) return;
+	      return {
+	        "http://__ldwalk/query": term.substring(6, term.length - 1)
+	      };
 	    }
 
-	    function _expandWalkToTerms() {
-	      _expandWalkToTerms = _asyncToGenerator(regeneratorRuntime.mark(function _callee3(pathContext, walkTo) {
-	        var expansionDocument, expandedDocument;
+	    function expandWalkToSteps(_x3, _x4) {
+	      return _expandWalkToSteps.apply(this, arguments);
+	    }
+
+	    function _expandWalkToSteps() {
+	      _expandWalkToSteps = _asyncToGenerator(regeneratorRuntime.mark(function _callee3(pathContext, walkTo) {
+	        var expansionDocument, expandedDocument, isGraph, compactedDocument;
 	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
 	          while (1) {
 	            switch (_context3.prev = _context3.next) {
 	              case 0:
 	                expansionDocument = {
-	                  "@context": pathContext,
+	                  "@context": [pathContext, {
+	                    "http://__ldwalk/term": {
+	                      "@type": "@vocab"
+	                    }
+	                  }],
 	                  "@graph": walkTo.map(function (t) {
-	                    return _defineProperty({}, t, []);
+	                    var parsedQuery = parseQuery(t);
+
+	                    if (parsedQuery) {
+	                      return parsedQuery;
+	                    } else {
+	                      return {
+	                        "http://__ldwalk/term": t
+	                      };
+	                    }
 	                  })
 	                };
 	                _context3.next = 3;
@@ -2307,18 +2427,40 @@
 
 	              case 3:
 	                expandedDocument = _context3.sent;
-	                return _context3.abrupt("return", expandedDocument.map(function (o) {
-	                  return Object.keys(o)[0];
-	                }));
+	                isGraph = expandedDocument.length > 1;
+	                _context3.next = 7;
+	                return jsonld.compact(expandedDocument, {
+	                  "@context": {
+	                    "@vocab": "http://__ldwalk/",
+	                    "term": {
+	                      "@id": "http://__ldwalk/term",
+	                      "@type": "@id"
+	                    }
+	                  }
+	                });
 
-	              case 5:
+	              case 7:
+	                compactedDocument = _context3.sent;
+
+	                if (!isGraph) {
+	                  _context3.next = 12;
+	                  break;
+	                }
+
+	                return _context3.abrupt("return", compactedDocument["@graph"]);
+
+	              case 12:
+	                delete compactedDocument["@context"];
+	                return _context3.abrupt("return", [compactedDocument]);
+
+	              case 14:
 	              case "end":
 	                return _context3.stop();
 	            }
 	          }
 	        }, _callee3);
 	      }));
-	      return _expandWalkToTerms.apply(this, arguments);
+	      return _expandWalkToSteps.apply(this, arguments);
 	    }
 
 	    function walkFrom(pathContext, walkFrom) {

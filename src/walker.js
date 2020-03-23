@@ -10,14 +10,23 @@ const walker = {
             from: walkFrom.bind(this, pathContext)
         };
 
+
+        function initializeQueryForWalking(expanded) {
+            /*
+                We always walk using an empty @context becuase we expand all the terms needed prior to walking
+            */
+            return ld(expanded, {});
+        }
+
         /*
             Given a URL, we want to download the document referenced, expand it and convert it to an ld-query object.
             Note that we pass in an empty context object. This is because we will make all our queries using fully-qualified terms
         */
         async function URLtoQuery(url) {
             try {
+
                 const expandedDoc = await jsonld.expand(url);
-                return ld(expandedDoc, {});
+                return initializeQueryForWalking(expandedDoc);
 
             } catch (err) {
 
@@ -43,8 +52,8 @@ const walker = {
             // if necessary convert walkTo to an array
             if(!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
 
-            // expand the terms we are going to walk
-            const terms = await expandWalkToTerms(pathContext, walkTo);
+            // expand the steps we are going to walk
+            const steps = await expandWalkToSteps(pathContext, walkTo);
 
             // fetch the starting point document if needed
             if (!lastFetched) {
@@ -56,27 +65,58 @@ const walker = {
 
             // step through until we can't any more
             let stepCount = 0;
-            while (query && query.query && terms.length) {
+            while (query && query.query && steps.length) {
 
                 // next term, and note the step
-                const term = terms.shift();
+                const step = steps.shift();
                 stepCount++;
 
-                // this is the query that ld-query needs to query into the document
-                const termPath = `> ${term}`;
-                let nextQuery = query.query(termPath);
+                /*
+                    Steps will contain one of the following:
+                        - term (a normal walk term)
+                        - query (a query to run to change the context)
+                */
+                let nextQuery
+                if("term" in step) {
+                    // a normal walk term
 
-                // not found - could be remote?
-                if (!nextQuery) {
-                    const maybeId = query.query("> @id");
-                    if (maybeId) {
+                    // this is the query that ld-query needs to query into the document
+                    const term = step["term"];
+                    const termPath = `> ${term}`;
+                    nextQuery = query.query(termPath);
 
-                        // try dereferencing this
-                        lastFetched = maybeId;
-                        const fetched = await URLtoQuery(maybeId);
-                        nextQuery = fetched && fetched.query(termPath);
+                    // not found - could be remote?
+                    if (!nextQuery) {
+                        const maybeId = query.query("> @id");
+                        if (maybeId) {
+
+                            // try dereferencing this
+                            lastFetched = maybeId;
+                            const fetched = await URLtoQuery(maybeId);
+                            nextQuery = fetched && fetched.query(termPath);
+
+                        }
 
                     }
+                } else if("query" in step) {
+
+                    /*
+                        we will carry out this query using the pathContext supplied, so create a new query object with that context
+                    */
+                    const temporaryQuery = ld(query.json(), pathContext);
+                    /*
+                        1. conduct our query to find the json within this document
+                        2. traverse to the parent
+                    */
+                    const queryResult = temporaryQuery.query(step.query);
+                    const queryParent = queryResult && queryResult.parent();
+
+                    // reinitialize the query for walking
+                    nextQuery = queryParent && initializeQueryForWalking(queryParent.json());
+
+                } else {
+
+                    throw new Error("Unhandled step: " + JSON.stringify(step));
 
                 }
 
@@ -143,15 +183,60 @@ const walker = {
 
         }
 
-        async function expandWalkToTerms(pathContext, walkTo) {
+        function parseQuery(term) {
+            // we need to parse a term which (might) define a query
+            if(!(term && term.startsWith("query["))) return;
+            if(!term.endsWith("]")) return;
+
+            // strip out the middle of the query and return
+            return { "http://__ldwalk/query": term.substring(6, term.length - 1) };
+        }
+
+        async function expandWalkToSteps(pathContext, walkTo) {
             const expansionDocument = {
-                "@context": pathContext,
+                "@context": [
+                    pathContext,
+                    {
+                        "http://__ldwalk/term": { "@type": "@vocab" }
+                    }
+                ],
                 "@graph": walkTo.map(function (t) {
-                    return { [t]: [] }; // a document containing the term with an array containing no values
+
+                    let parsedQuery = parseQuery(t);
+                    if(parsedQuery) {
+                        /*
+                            this will look like { "http://__ldwalk/query": "[@type=Collection]" }
+                            where the value of the key is the ld-query to execute as part of the walk
+                        */
+                        return parsedQuery;
+                    } else {
+                        /*
+                            this will look like { "http://__ldwalk/term": "products" }
+                            It is assumed that this will be the normal way to walk
+                        */
+                        return { "http://__ldwalk/term": t };
+                    }
                 })
             };
+            // this will make everything fully qualified
             const expandedDocument = await jsonld.expand(expansionDocument);
-            return expandedDocument.map(o => Object.keys(o)[0]);
+            const isGraph = expandedDocument.length > 1;
+            // this compacts it again, leaving terms other than __ldwalk ones fully qualified
+            const compactedDocument = await jsonld.compact(expandedDocument, { "@context": { "@vocab": "http://__ldwalk/", "term": { "@id": "http://__ldwalk/term", "@type": "@id" } } });
+            /*
+                the resulting document will end up with either have a @graph in it:
+                    in which case we are going to return the raw @graph, which will look something like:
+                        [ { term: 'things' }, { query: '*[name="Some oranges"]' } ]
+                or it will be a simple object:
+                    so we need to encapsulate it in an array, like this (and we remove the @context):
+                        [ { term: 'things' } ]
+            */
+            if(isGraph)
+                return compactedDocument["@graph"];
+            else {
+                delete compactedDocument["@context"];
+                return [ compactedDocument ];
+            }
         }
 
         function walkFrom(pathContext, walkFrom) {

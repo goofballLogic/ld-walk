@@ -7,10 +7,14 @@ const walker = {
       from: walkFrom.bind(this, pathContext)
     };
 
+    function initializeQueryForWalking(expanded) {
+      return ld(expanded, {});
+    }
+
     async function URLtoQuery(url) {
       try {
         const expandedDoc = await jsonld.expand(url);
-        return ld(expandedDoc, {});
+        return initializeQueryForWalking(expandedDoc);
       } catch (err) {
         if (err.details && err.details.code == "loading document failed") return null;
         throw err;
@@ -26,7 +30,7 @@ const walker = {
       suppressFinalDereferencing
     }) {
       if (!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
-      const terms = await expandWalkToTerms(pathContext, walkTo);
+      const steps = await expandWalkToSteps(pathContext, walkTo);
 
       if (!lastFetched) {
         query = await URLtoQuery(walkFrom);
@@ -35,20 +39,32 @@ const walker = {
 
       let stepCount = 0;
 
-      while (query && query.query && terms.length) {
-        const term = terms.shift();
+      while (query && query.query && steps.length) {
+        const step = steps.shift();
         stepCount++;
-        const termPath = `> ${term}`;
-        let nextQuery = query.query(termPath);
+        let nextQuery;
 
-        if (!nextQuery) {
-          const maybeId = query.query("> @id");
+        if ("term" in step) {
+          const term = step["term"];
+          const termPath = `> ${term}`;
+          nextQuery = query.query(termPath);
 
-          if (maybeId) {
-            lastFetched = maybeId;
-            const fetched = await URLtoQuery(maybeId);
-            nextQuery = fetched && fetched.query(termPath);
+          if (!nextQuery) {
+            const maybeId = query.query("> @id");
+
+            if (maybeId) {
+              lastFetched = maybeId;
+              const fetched = await URLtoQuery(maybeId);
+              nextQuery = fetched && fetched.query(termPath);
+            }
           }
+        } else if ("query" in step) {
+          const temporaryQuery = ld(query.json(), pathContext);
+          const queryResult = temporaryQuery.query(step.query);
+          const queryParent = queryResult && queryResult.parent();
+          nextQuery = queryParent && initializeQueryForWalking(queryParent.json());
+        } else {
+          throw new Error("Unhandled step: " + JSON.stringify(step));
         }
 
         query = nextQuery;
@@ -81,17 +97,48 @@ const walker = {
       return result;
     }
 
-    async function expandWalkToTerms(pathContext, walkTo) {
+    function parseQuery(term) {
+      if (!(term && term.startsWith("query["))) return;
+      if (!term.endsWith("]")) return;
+      return {
+        "http://__ldwalk/query": term.substring(6, term.length - 1)
+      };
+    }
+
+    async function expandWalkToSteps(pathContext, walkTo) {
       const expansionDocument = {
-        "@context": pathContext,
+        "@context": [pathContext, {
+          "http://__ldwalk/term": {
+            "@type": "@vocab"
+          }
+        }],
         "@graph": walkTo.map(function (t) {
-          return {
-            [t]: []
-          };
+          let parsedQuery = parseQuery(t);
+
+          if (parsedQuery) {
+            return parsedQuery;
+          } else {
+            return {
+              "http://__ldwalk/term": t
+            };
+          }
         })
       };
       const expandedDocument = await jsonld.expand(expansionDocument);
-      return expandedDocument.map(o => Object.keys(o)[0]);
+      const isGraph = expandedDocument.length > 1;
+      const compactedDocument = await jsonld.compact(expandedDocument, {
+        "@context": {
+          "@vocab": "http://__ldwalk/",
+          "term": {
+            "@id": "http://__ldwalk/term",
+            "@type": "@id"
+          }
+        }
+      });
+      if (isGraph) return compactedDocument["@graph"];else {
+        delete compactedDocument["@context"];
+        return [compactedDocument];
+      }
     }
 
     function walkFrom(pathContext, walkFrom) {

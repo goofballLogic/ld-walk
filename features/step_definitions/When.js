@@ -7,6 +7,12 @@ When('I walk to {string}', async function (path) {
     this.result = await walker.walk(walkContext, dependencies).from(walkFrom).to(pathBits, walkOptions);
 });
 
+When('I walk to', async function (dataTable) {
+    const { walkContext, walkFrom, walkOptions, dependencies } = this;
+    const pathBits = dataTable.hashes().map(x => x["Parts"]);
+    this.result = await walker.walk(walkContext, dependencies).from(walkFrom).to(pathBits, walkOptions);
+});
+
 When('I query the result for {string}', async function (query) {
     if(!this.result) throw new Error("No walk started");
     if(!this.result.succeeded) throw new Error("Walk failed, unable to query: " + JSON.stringify(this.result));
