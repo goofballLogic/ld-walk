@@ -2,6 +2,7 @@
     "@context": "http://test.com/context.jsonld",
     "@id": "http://test.com/collection-walk",
     "things": {
+        "urlTemplate": "http://test.com/collection-walk/{itemId}",
         "items": [
             {
                 "@id": "http://test.com/collection-walk/apples",

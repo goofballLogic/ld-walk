@@ -49,7 +49,7 @@ export default [
             file: "dist/walker.js",
             name: "ldWalker"
         },
-        plugins: [babelES6]
+        plugins: [babelES6, resolve(), commonjs() ]
     },
     {
         input: "src/walker.js",
@@ -58,6 +58,6 @@ export default [
             name: "ldWalker",
             sourcemap: true
         },
-        plugins: [babelES6, terser()]
+        plugins: [babelES6, resolve(), commonjs(), terser()]
     }
 ]

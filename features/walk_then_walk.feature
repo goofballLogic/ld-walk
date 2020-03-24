@@ -4,7 +4,7 @@ Feature: Walk and query
     So that I can proceed to a new location
 
     Background: Load local walk data
-        Given a walk context "walk-then-walk"
+        Given a walk context "basic"
         And the api "http://test.com/local-walk"
 
     Scenario: a property nested within the document

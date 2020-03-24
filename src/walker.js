@@ -1,3 +1,5 @@
+import urlTemplate from "url-template";
+
 const walker = {
 
     walk(pathContext, dependencies = {}) {
@@ -65,11 +67,14 @@ const walker = {
 
             // step through until we can't any more
             let stepCount = 0;
+            let err;
+            let bookmarkedQuery;
             while (query && query.query && steps.length) {
 
-                // next term, and note the step
+                // next term, and note the step, bookmark the last query
                 const step = steps.shift();
                 stepCount++;
+                bookmarkedQuery = query;
 
                 /*
                     Steps will contain one of the following:
@@ -98,6 +103,13 @@ const walker = {
                         }
 
                     }
+
+                } else if("id" in step) {
+
+                    const soughtId = step["id"];
+                    /* try to find the id locally, then remote if necessary */
+                    nextQuery = await walkToIdentifiedObject(soughtId);
+
                 } else if("query" in step) {
 
                     /*
@@ -113,6 +125,22 @@ const walker = {
 
                     // reinitialize the query for walking
                     nextQuery = queryParent && initializeQueryForWalking(queryParent.json());
+
+                } else if("template" in step) {
+
+                    const template = step["template"];
+                    const [ templatePath, templateArguments ] = template.split(",").map(x => x && x.trim());
+                    try {
+                        // find and expand the template
+                        const expandedTemplate = await expandTemplate(templatePath, templateArguments, { pathContext, query });
+                        // if we got one, walk to the identified object
+                        nextQuery = expandedTemplate && await walkToIdentifiedObject(expandedTemplate);
+
+                    } catch(caught) {
+                        err = caught;
+                        nextQuery = undefined;
+                    }
+
 
                 } else {
 
@@ -141,8 +169,10 @@ const walker = {
             }
 
             /*
-                This is the result from the walk with various choices for proceeding
+                This factory function exists so that a result can produce more results after operations such
+                as template expansion
             */
+            const succeeded = !!query;
             const result = {
                 /*
                     These terms are the ones we managed to walk through. Note that even if all the steps
@@ -156,21 +186,36 @@ const walker = {
                 toQuery: (maybeContext) => query && ld(query.json(), maybeContext || {}),
                 /*
                     This allows the consumer to continue walking from the point where they left off.
-                    If there was no query at the stopping point, this will return the same result object
+                    If the previous walk failed, this will return the same result object
                     that this was called on (to allow chaining)
                 */
-                continueTo: (nextWalkTo, nextOptions) => query
+                continueTo: (nextWalkTo, nextOptions) => succeeded
                     ? executeWalk({ ...nextOptions, pathContext, walkTo: nextWalkTo, lastFetched, query })
                     : result,
-
                 /*
                     If we didn't end up with a populated ld-query, it means the walk failed to find anything,
                     either because it was aborted part of the way through, or because the final step resulted
                     in a null document
                 */
-                succeeded: !!query
+                succeeded,
+                /*
+                    Template expansion needs to take the current query (if any), transform it, and then walk
+                    to the result
+                */
+                viaTemplate: (prop, args) => succeeded
+                    ? expandTemplateAndWalk(prop, args, { pathContext, lastFetched, query })
+                    : result,
+
             };
 
+            if (err) {
+                /*
+                    If an error object is supplied, it is expected to contain a message property and the json
+                    of the query to provide some context
+                */
+               result.err = { message: err.message, json: bookmarkedQuery ? bookmarkedQuery.json() : null };
+
+            }
             if (!result.succeeded) {
                 /*
                     we didn't find what we were looking for - report any steps we didn't get to.
@@ -181,15 +226,86 @@ const walker = {
             }
             return result;
 
+
+            async function walkToIdentifiedObject(soughtId) {
+                // try to find this id locally first
+                let nextQuery = query.query(`[@id=${soughtId}]`);
+                // not found - could be remote?
+                if (!nextQuery) {
+                    // try dereferencing this
+                    lastFetched = soughtId;
+                    nextQuery = await URLtoQuery(soughtId);
+                }
+                return nextQuery;
+            }
         }
 
-        function parseQuery(term) {
-            // we need to parse a term which (might) define a query
-            if(!(term && term.startsWith("query["))) return;
-            if(!term.endsWith("]")) return;
+        /*
+            Coming into this function, we have a path to the template property and some args to expand
+            the template once located.
 
-            // strip out the middle of the query and return
-            return { "http://__ldwalk/query": term.substring(6, term.length - 1) };
+            If at any point in the function we fail, we will return a result object with succeeded: false
+            and the reason indicated as result.err
+        */
+        async function expandTemplateAndWalk(templatePath, templateArgs, walkArgs) {
+
+            try {
+                // expand the template so we know where to talk to next
+                const expandedTemplate = await expandTemplate(templatePath, templateArgs, walkArgs);
+
+                // now we have the expanded template (Hopefully a URI), walk to it
+                return executeWalk({ ...walkArgs, walkTo: [`id[${expandedTemplate}]`] });
+
+            } catch(err) {
+
+                // on an error, indicate failure with error message and context
+                const query = walkArgs && walkArgs.query;
+                return { succeeded: false, err: { message: err.message, json: query ? query.json() : null }};
+
+            }
+        }
+
+        /*
+            This function will expand a template and return it, but there is no protection against thrown errors.
+            As such, this is a shared implementation which needs to be handled by the caller carefully.
+        */
+        async function expandTemplate(templatePath, templateArgs, { pathContext, query }) {
+            if (!query)
+                throw new Error("No query object during template expansion");
+            if (!templatePath)
+                throw new Error("No template path specified");
+            // it's possible to pass in a string of JSON rather than an object for the args
+            if (typeof templateArgs === "string")
+                templateArgs = JSON.parse(templateArgs);
+            // first thing we need to do is to expand the template path
+            const expandedTemplatePath = await expandWalkToSteps(pathContext, [templatePath]);
+            if (!(expandedTemplatePath[0] && expandedTemplatePath[0].term))
+                throw new Error("Aborting - template path expansion failed (e.g. resulted in an empty string)");
+            const templateTerm = expandedTemplatePath[0].term;
+            // now lets see if we have an actual template
+            let template = query.query(`> ${templateTerm}`);
+            if (!template)
+                throw new Error(`Failed to locate template ${templateTerm}`);
+            // we might have a final node, or we might need to get the @value
+            if (template.query)
+                template = template.query("@value");
+            // now we should have the actual template to expand
+            if (!template)
+                throw new Error("Template property has no value to expand");
+            const expandedTemplate = urlTemplate.parse(template).expand(templateArgs);
+            return expandedTemplate;
+        }
+
+        function parseFunctionalTerm(term) {
+            /*
+                we need to parse a term which (might) define a function which will take the form of e.g.
+                    my-magic-function[arugments here]
+                where function name id "my-magic-function" and arugments are "arguments here"
+            */
+            if (!term) return;
+            const matched = /^([^\[]+)\[(.*)\]$/.exec(term);
+            if (!matched) return;
+            return { [`http://__ldwalk/${matched[1]}`]: matched[2] };
         }
 
         async function expandWalkToSteps(pathContext, walkTo) {
@@ -202,20 +318,24 @@ const walker = {
                 ],
                 "@graph": walkTo.map(function (t) {
 
-                    let parsedQuery = parseQuery(t);
-                    if(parsedQuery) {
+                    const parsedFunctionalTerm = parseFunctionalTerm(t);
+                    if(parsedFunctionalTerm) {
                         /*
                             this will look like { "http://__ldwalk/query": "[@type=Collection]" }
-                            where the value of the key is the ld-query to execute as part of the walk
+                            where the value is the ld-query to execute as part of the walk
+
+                            or
+
+                            { "http://__ldwalk/id": "http://somewhere.com/something" }
+                            where the value is the id we want to locate within the document (or potentially dereference)
                         */
-                        return parsedQuery;
-                    } else {
-                        /*
-                            this will look like { "http://__ldwalk/term": "products" }
-                            It is assumed that this will be the normal way to walk
-                        */
-                        return { "http://__ldwalk/term": t };
+                        return parsedFunctionalTerm;
                     }
+                    /*
+                        this will look like { "http://__ldwalk/term": "products" }
+                        It is assumed that this will be the normal way to walk
+                    */
+                    return { "http://__ldwalk/term": t };
                 })
             };
             // this will make everything fully qualified

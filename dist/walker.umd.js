@@ -949,68 +949,6 @@
 	  exec: regexpExec
 	});
 
-	var MATCH = wellKnownSymbol('match');
-
-	// `IsRegExp` abstract operation
-	// https://tc39.github.io/ecma262/#sec-isregexp
-	var isRegexp = function (it) {
-	  var isRegExp;
-	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
-	};
-
-	var notARegexp = function (it) {
-	  if (isRegexp(it)) {
-	    throw TypeError("The method doesn't accept regular expressions");
-	  } return it;
-	};
-
-	var MATCH$1 = wellKnownSymbol('match');
-
-	var correctIsRegexpLogic = function (METHOD_NAME) {
-	  var regexp = /./;
-	  try {
-	    '/./'[METHOD_NAME](regexp);
-	  } catch (e) {
-	    try {
-	      regexp[MATCH$1] = false;
-	      return '/./'[METHOD_NAME](regexp);
-	    } catch (f) { /* empty */ }
-	  } return false;
-	};
-
-	var getOwnPropertyDescriptor$2 = objectGetOwnPropertyDescriptor.f;
-
-
-
-
-
-
-	var nativeEndsWith = ''.endsWith;
-	var min$2 = Math.min;
-
-	var CORRECT_IS_REGEXP_LOGIC = correctIsRegexpLogic('endsWith');
-	// https://github.com/zloirock/core-js/pull/702
-	var MDN_POLYFILL_BUG =  !CORRECT_IS_REGEXP_LOGIC && !!function () {
-	  var descriptor = getOwnPropertyDescriptor$2(String.prototype, 'endsWith');
-	  return descriptor && !descriptor.writable;
-	}();
-
-	// `String.prototype.endsWith` method
-	// https://tc39.github.io/ecma262/#sec-string.prototype.endswith
-	_export({ target: 'String', proto: true, forced: !MDN_POLYFILL_BUG && !CORRECT_IS_REGEXP_LOGIC }, {
-	  endsWith: function endsWith(searchString /* , endPosition = @length */) {
-	    var that = String(requireObjectCoercible(this));
-	    notARegexp(searchString);
-	    var endPosition = arguments.length > 1 ? arguments[1] : undefined;
-	    var len = toLength(that.length);
-	    var end = endPosition === undefined ? len : min$2(toLength(endPosition), len);
-	    var search = String(searchString);
-	    return nativeEndsWith
-	      ? nativeEndsWith.call(that, search, end)
-	      : that.slice(end - search.length, end) === search;
-	  }
-	});
-
 	// TODO: Remove from `core-js@4` since it's moved to entry points
 
 
@@ -1136,6 +1074,15 @@
 	  if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	};
 
+	var MATCH = wellKnownSymbol('match');
+
+	// `IsRegExp` abstract operation
+	// https://tc39.github.io/ecma262/#sec-isregexp
+	var isRegexp = function (it) {
+	  var isRegExp;
+	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
+	};
+
 	var SPECIES$4 = wellKnownSymbol('species');
 
 	// `SpeciesConstructor` abstract operation
@@ -1199,7 +1146,7 @@
 	};
 
 	var arrayPush = [].push;
-	var min$3 = Math.min;
+	var min$2 = Math.min;
 	var MAX_UINT32 = 0xFFFFFFFF;
 
 	// babel-minify transpiles RegExp('x', 'y') -> /x/y and it causes SyntaxError
@@ -1302,7 +1249,7 @@
 	        var e;
 	        if (
 	          z === null ||
-	          (e = min$3(toLength(splitter.lastIndex + (SUPPORTS_Y ? 0 : q)), S.length)) === p
+	          (e = min$2(toLength(splitter.lastIndex + (SUPPORTS_Y ? 0 : q)), S.length)) === p
 	        ) {
 	          q = advanceStringIndex(S, q, unicodeMatching);
 	        } else {
@@ -1321,36 +1268,183 @@
 	  ];
 	}, !SUPPORTS_Y);
 
-	var getOwnPropertyDescriptor$3 = objectGetOwnPropertyDescriptor.f;
+	// a string of all valid unicode whitespaces
+	// eslint-disable-next-line max-len
+	var whitespaces = '\u0009\u000A\u000B\u000C\u000D\u0020\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028\u2029\uFEFF';
+
+	var whitespace = '[' + whitespaces + ']';
+	var ltrim = RegExp('^' + whitespace + whitespace + '*');
+	var rtrim = RegExp(whitespace + whitespace + '*$');
+
+	// `String.prototype.{ trim, trimStart, trimEnd, trimLeft, trimRight }` methods implementation
+	var createMethod$3 = function (TYPE) {
+	  return function ($this) {
+	    var string = String(requireObjectCoercible($this));
+	    if (TYPE & 1) string = string.replace(ltrim, '');
+	    if (TYPE & 2) string = string.replace(rtrim, '');
+	    return string;
+	  };
+	};
+
+	var stringTrim = {
+	  // `String.prototype.{ trimLeft, trimStart }` methods
+	  // https://tc39.github.io/ecma262/#sec-string.prototype.trimstart
+	  start: createMethod$3(1),
+	  // `String.prototype.{ trimRight, trimEnd }` methods
+	  // https://tc39.github.io/ecma262/#sec-string.prototype.trimend
+	  end: createMethod$3(2),
+	  // `String.prototype.trim` method
+	  // https://tc39.github.io/ecma262/#sec-string.prototype.trim
+	  trim: createMethod$3(3)
+	};
+
+	var non = '\u200B\u0085\u180E';
+
+	// check that a method works with the correct list
+	// of whitespaces and has a correct name
+	var stringTrimForced = function (METHOD_NAME) {
+	  return fails(function () {
+	    return !!whitespaces[METHOD_NAME]() || non[METHOD_NAME]() != non || whitespaces[METHOD_NAME].name !== METHOD_NAME;
+	  });
+	};
+
+	var $trim = stringTrim.trim;
 
 
-
-
-
-
-	var nativeStartsWith = ''.startsWith;
-	var min$4 = Math.min;
-
-	var CORRECT_IS_REGEXP_LOGIC$1 = correctIsRegexpLogic('startsWith');
-	// https://github.com/zloirock/core-js/pull/702
-	var MDN_POLYFILL_BUG$1 =  !CORRECT_IS_REGEXP_LOGIC$1 && !!function () {
-	  var descriptor = getOwnPropertyDescriptor$3(String.prototype, 'startsWith');
-	  return descriptor && !descriptor.writable;
-	}();
-
-	// `String.prototype.startsWith` method
-	// https://tc39.github.io/ecma262/#sec-string.prototype.startswith
-	_export({ target: 'String', proto: true, forced: !MDN_POLYFILL_BUG$1 && !CORRECT_IS_REGEXP_LOGIC$1 }, {
-	  startsWith: function startsWith(searchString /* , position = 0 */) {
-	    var that = String(requireObjectCoercible(this));
-	    notARegexp(searchString);
-	    var index = toLength(min$4(arguments.length > 1 ? arguments[1] : undefined, that.length));
-	    var search = String(searchString);
-	    return nativeStartsWith
-	      ? nativeStartsWith.call(that, search, index)
-	      : that.slice(index, index + search.length) === search;
+	// `String.prototype.trim` method
+	// https://tc39.github.io/ecma262/#sec-string.prototype.trim
+	_export({ target: 'String', proto: true, forced: stringTrimForced('trim') }, {
+	  trim: function trim() {
+	    return $trim(this);
 	  }
 	});
+
+	function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+	  try {
+	    var info = gen[key](arg);
+	    var value = info.value;
+	  } catch (error) {
+	    reject(error);
+	    return;
+	  }
+
+	  if (info.done) {
+	    resolve(value);
+	  } else {
+	    Promise.resolve(value).then(_next, _throw);
+	  }
+	}
+
+	function _asyncToGenerator(fn) {
+	  return function () {
+	    var self = this,
+	        args = arguments;
+	    return new Promise(function (resolve, reject) {
+	      var gen = fn.apply(self, args);
+
+	      function _next(value) {
+	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+	      }
+
+	      function _throw(err) {
+	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
+	      }
+
+	      _next(undefined);
+	    });
+	  };
+	}
+
+	function _defineProperty(obj, key, value) {
+	  if (key in obj) {
+	    Object.defineProperty(obj, key, {
+	      value: value,
+	      enumerable: true,
+	      configurable: true,
+	      writable: true
+	    });
+	  } else {
+	    obj[key] = value;
+	  }
+
+	  return obj;
+	}
+
+	function ownKeys$1(object, enumerableOnly) {
+	  var keys = Object.keys(object);
+
+	  if (Object.getOwnPropertySymbols) {
+	    var symbols = Object.getOwnPropertySymbols(object);
+	    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+	      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+	    });
+	    keys.push.apply(keys, symbols);
+	  }
+
+	  return keys;
+	}
+
+	function _objectSpread2(target) {
+	  for (var i = 1; i < arguments.length; i++) {
+	    var source = arguments[i] != null ? arguments[i] : {};
+
+	    if (i % 2) {
+	      ownKeys$1(Object(source), true).forEach(function (key) {
+	        _defineProperty(target, key, source[key]);
+	      });
+	    } else if (Object.getOwnPropertyDescriptors) {
+	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+	    } else {
+	      ownKeys$1(Object(source)).forEach(function (key) {
+	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+	      });
+	    }
+	  }
+
+	  return target;
+	}
+
+	function _slicedToArray(arr, i) {
+	  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
+	}
+
+	function _arrayWithHoles(arr) {
+	  if (Array.isArray(arr)) return arr;
+	}
+
+	function _iterableToArrayLimit(arr, i) {
+	  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+	    return;
+	  }
+
+	  var _arr = [];
+	  var _n = true;
+	  var _d = false;
+	  var _e = undefined;
+
+	  try {
+	    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+	      _arr.push(_s.value);
+
+	      if (i && _arr.length === i) break;
+	    }
+	  } catch (err) {
+	    _d = true;
+	    _e = err;
+	  } finally {
+	    try {
+	      if (!_n && _i["return"] != null) _i["return"]();
+	    } finally {
+	      if (_d) throw _e;
+	    }
+	  }
+
+	  return _arr;
+	}
+
+	function _nonIterableRest() {
+	  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+	}
 
 	var runtime_1 = createCommonjsModule(function (module) {
 	/**
@@ -2083,90 +2177,196 @@
 	}
 	});
 
-	function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
-	  try {
-	    var info = gen[key](arg);
-	    var value = info.value;
-	  } catch (error) {
-	    reject(error);
-	    return;
+	var urlTemplate = createCommonjsModule(function (module, exports) {
+	(function (root, factory) {
+	    {
+	        module.exports = factory();
+	    }
+	}(commonjsGlobal, function () {
+	  /**
+	   * @constructor
+	   */
+	  function UrlTemplate() {
 	  }
 
-	  if (info.done) {
-	    resolve(value);
-	  } else {
-	    Promise.resolve(value).then(_next, _throw);
-	  }
-	}
-
-	function _asyncToGenerator(fn) {
-	  return function () {
-	    var self = this,
-	        args = arguments;
-	    return new Promise(function (resolve, reject) {
-	      var gen = fn.apply(self, args);
-
-	      function _next(value) {
-	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
+	  /**
+	   * @private
+	   * @param {string} str
+	   * @return {string}
+	   */
+	  UrlTemplate.prototype.encodeReserved = function (str) {
+	    return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
+	      if (!/%[0-9A-Fa-f]/.test(part)) {
+	        part = encodeURI(part).replace(/%5B/g, '[').replace(/%5D/g, ']');
 	      }
+	      return part;
+	    }).join('');
+	  };
 
-	      function _throw(err) {
-	        asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
-	      }
-
-	      _next(undefined);
+	  /**
+	   * @private
+	   * @param {string} str
+	   * @return {string}
+	   */
+	  UrlTemplate.prototype.encodeUnreserved = function (str) {
+	    return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
+	      return '%' + c.charCodeAt(0).toString(16).toUpperCase();
 	    });
 	  };
-	}
 
-	function _defineProperty(obj, key, value) {
-	  if (key in obj) {
-	    Object.defineProperty(obj, key, {
-	      value: value,
-	      enumerable: true,
-	      configurable: true,
-	      writable: true
-	    });
-	  } else {
-	    obj[key] = value;
-	  }
+	  /**
+	   * @private
+	   * @param {string} operator
+	   * @param {string} value
+	   * @param {string} key
+	   * @return {string}
+	   */
+	  UrlTemplate.prototype.encodeValue = function (operator, value, key) {
+	    value = (operator === '+' || operator === '#') ? this.encodeReserved(value) : this.encodeUnreserved(value);
 
-	  return obj;
-	}
-
-	function ownKeys$1(object, enumerableOnly) {
-	  var keys = Object.keys(object);
-
-	  if (Object.getOwnPropertySymbols) {
-	    var symbols = Object.getOwnPropertySymbols(object);
-	    if (enumerableOnly) symbols = symbols.filter(function (sym) {
-	      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-	    });
-	    keys.push.apply(keys, symbols);
-	  }
-
-	  return keys;
-	}
-
-	function _objectSpread2(target) {
-	  for (var i = 1; i < arguments.length; i++) {
-	    var source = arguments[i] != null ? arguments[i] : {};
-
-	    if (i % 2) {
-	      ownKeys$1(Object(source), true).forEach(function (key) {
-	        _defineProperty(target, key, source[key]);
-	      });
-	    } else if (Object.getOwnPropertyDescriptors) {
-	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+	    if (key) {
+	      return this.encodeUnreserved(key) + '=' + value;
 	    } else {
-	      ownKeys$1(Object(source)).forEach(function (key) {
-	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-	      });
+	      return value;
 	    }
-	  }
+	  };
 
-	  return target;
-	}
+	  /**
+	   * @private
+	   * @param {*} value
+	   * @return {boolean}
+	   */
+	  UrlTemplate.prototype.isDefined = function (value) {
+	    return value !== undefined && value !== null;
+	  };
+
+	  /**
+	   * @private
+	   * @param {string}
+	   * @return {boolean}
+	   */
+	  UrlTemplate.prototype.isKeyOperator = function (operator) {
+	    return operator === ';' || operator === '&' || operator === '?';
+	  };
+
+	  /**
+	   * @private
+	   * @param {Object} context
+	   * @param {string} operator
+	   * @param {string} key
+	   * @param {string} modifier
+	   */
+	  UrlTemplate.prototype.getValues = function (context, operator, key, modifier) {
+	    var value = context[key],
+	        result = [];
+
+	    if (this.isDefined(value) && value !== '') {
+	      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+	        value = value.toString();
+
+	        if (modifier && modifier !== '*') {
+	          value = value.substring(0, parseInt(modifier, 10));
+	        }
+
+	        result.push(this.encodeValue(operator, value, this.isKeyOperator(operator) ? key : null));
+	      } else {
+	        if (modifier === '*') {
+	          if (Array.isArray(value)) {
+	            value.filter(this.isDefined).forEach(function (value) {
+	              result.push(this.encodeValue(operator, value, this.isKeyOperator(operator) ? key : null));
+	            }, this);
+	          } else {
+	            Object.keys(value).forEach(function (k) {
+	              if (this.isDefined(value[k])) {
+	                result.push(this.encodeValue(operator, value[k], k));
+	              }
+	            }, this);
+	          }
+	        } else {
+	          var tmp = [];
+
+	          if (Array.isArray(value)) {
+	            value.filter(this.isDefined).forEach(function (value) {
+	              tmp.push(this.encodeValue(operator, value));
+	            }, this);
+	          } else {
+	            Object.keys(value).forEach(function (k) {
+	              if (this.isDefined(value[k])) {
+	                tmp.push(this.encodeUnreserved(k));
+	                tmp.push(this.encodeValue(operator, value[k].toString()));
+	              }
+	            }, this);
+	          }
+
+	          if (this.isKeyOperator(operator)) {
+	            result.push(this.encodeUnreserved(key) + '=' + tmp.join(','));
+	          } else if (tmp.length !== 0) {
+	            result.push(tmp.join(','));
+	          }
+	        }
+	      }
+	    } else {
+	      if (operator === ';') {
+	        if (this.isDefined(value)) {
+	          result.push(this.encodeUnreserved(key));
+	        }
+	      } else if (value === '' && (operator === '&' || operator === '?')) {
+	        result.push(this.encodeUnreserved(key) + '=');
+	      } else if (value === '') {
+	        result.push('');
+	      }
+	    }
+	    return result;
+	  };
+
+	  /**
+	   * @param {string} template
+	   * @return {function(Object):string}
+	   */
+	  UrlTemplate.prototype.parse = function (template) {
+	    var that = this;
+	    var operators = ['+', '#', '.', '/', ';', '?', '&'];
+
+	    return {
+	      expand: function (context) {
+	        return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
+	          if (expression) {
+	            var operator = null,
+	                values = [];
+
+	            if (operators.indexOf(expression.charAt(0)) !== -1) {
+	              operator = expression.charAt(0);
+	              expression = expression.substr(1);
+	            }
+
+	            expression.split(/,/g).forEach(function (variable) {
+	              var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
+	              values.push.apply(values, that.getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
+	            });
+
+	            if (operator && operator !== '+') {
+	              var separator = ',';
+
+	              if (operator === '?') {
+	                separator = '&';
+	              } else if (operator !== '#') {
+	                separator = operator;
+	              }
+	              return (values.length !== 0 ? operator : '') + values.join(separator);
+	            } else {
+	              return values.join(',');
+	            }
+	          } else {
+	            return that.encodeReserved(literal);
+	          }
+	        });
+	      }
+	    };
+	  };
+
+	  return new UrlTemplate();
+	}));
+	});
 
 	var walker = {
 	  walk: function walk(pathContext) {
@@ -2230,47 +2430,87 @@
 	    }
 
 	    function _executeWalk() {
-	      _executeWalk = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(_ref) {
-	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, steps, stepCount, step, nextQuery, term, termPath, maybeId, fetched, temporaryQuery, queryResult, queryParent, finalId, result;
-	        return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	      _executeWalk = _asyncToGenerator(regeneratorRuntime.mark(function _callee3(_ref2) {
+	        var pathContext, walkFrom, walkTo, lastFetched, query, suppressFinalDereferencing, steps, stepCount, err, bookmarkedQuery, step, nextQuery, term, termPath, maybeId, fetched, soughtId, temporaryQuery, queryResult, queryParent, template, _template$split$map, _template$split$map2, templatePath, templateArguments, expandedTemplate, finalId, succeeded, result, walkToIdentifiedObject, _walkToIdentifiedObject;
+
+	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
 	          while (1) {
-	            switch (_context2.prev = _context2.next) {
+	            switch (_context3.prev = _context3.next) {
 	              case 0:
-	                pathContext = _ref.pathContext, walkFrom = _ref.walkFrom, walkTo = _ref.walkTo, lastFetched = _ref.lastFetched, query = _ref.query, suppressFinalDereferencing = _ref.suppressFinalDereferencing;
+	                _walkToIdentifiedObject = function _ref4() {
+	                  _walkToIdentifiedObject = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(soughtId) {
+	                    var nextQuery;
+	                    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+	                      while (1) {
+	                        switch (_context2.prev = _context2.next) {
+	                          case 0:
+	                            nextQuery = query.query("[@id=".concat(soughtId, "]"));
+
+	                            if (nextQuery) {
+	                              _context2.next = 6;
+	                              break;
+	                            }
+
+	                            lastFetched = soughtId;
+	                            _context2.next = 5;
+	                            return URLtoQuery(soughtId);
+
+	                          case 5:
+	                            nextQuery = _context2.sent;
+
+	                          case 6:
+	                            return _context2.abrupt("return", nextQuery);
+
+	                          case 7:
+	                          case "end":
+	                            return _context2.stop();
+	                        }
+	                      }
+	                    }, _callee2);
+	                  }));
+	                  return _walkToIdentifiedObject.apply(this, arguments);
+	                };
+
+	                walkToIdentifiedObject = function _ref3(_x11) {
+	                  return _walkToIdentifiedObject.apply(this, arguments);
+	                };
+
+	                pathContext = _ref2.pathContext, walkFrom = _ref2.walkFrom, walkTo = _ref2.walkTo, lastFetched = _ref2.lastFetched, query = _ref2.query, suppressFinalDereferencing = _ref2.suppressFinalDereferencing;
 	                if (!Array.isArray(walkTo)) walkTo = (walkTo || "").split(" ");
-	                _context2.next = 4;
+	                _context3.next = 6;
 	                return expandWalkToSteps(pathContext, walkTo);
 
-	              case 4:
-	                steps = _context2.sent;
+	              case 6:
+	                steps = _context3.sent;
 
 	                if (lastFetched) {
-	                  _context2.next = 10;
+	                  _context3.next = 12;
 	                  break;
 	                }
 
-	                _context2.next = 8;
+	                _context3.next = 10;
 	                return URLtoQuery(walkFrom);
 
-	              case 8:
-	                query = _context2.sent;
+	              case 10:
+	                query = _context3.sent;
 	                lastFetched = walkFrom;
 
-	              case 10:
+	              case 12:
 	                stepCount = 0;
 
-	              case 11:
+	              case 13:
 	                if (!(query && query.query && steps.length)) {
-	                  _context2.next = 40;
+	                  _context3.next = 71;
 	                  break;
 	                }
 
 	                step = steps.shift();
 	                stepCount++;
+	                bookmarkedQuery = query;
 	                nextQuery = void 0;
 
 	                if (!("term" in step)) {
-	                  _context2.next = 29;
+	                  _context3.next = 32;
 	                  break;
 	                }
 
@@ -2279,32 +2519,47 @@
 	                nextQuery = query.query(termPath);
 
 	                if (nextQuery) {
-	                  _context2.next = 27;
+	                  _context3.next = 30;
 	                  break;
 	                }
 
 	                maybeId = query.query("> @id");
 
 	                if (!maybeId) {
-	                  _context2.next = 27;
+	                  _context3.next = 30;
 	                  break;
 	                }
 
 	                lastFetched = maybeId;
-	                _context2.next = 25;
+	                _context3.next = 28;
 	                return URLtoQuery(maybeId);
 
-	              case 25:
-	                fetched = _context2.sent;
+	              case 28:
+	                fetched = _context3.sent;
 	                nextQuery = fetched && fetched.query(termPath);
 
-	              case 27:
-	                _context2.next = 37;
+	              case 30:
+	                _context3.next = 68;
 	                break;
 
-	              case 29:
+	              case 32:
+	                if (!("id" in step)) {
+	                  _context3.next = 39;
+	                  break;
+	                }
+
+	                soughtId = step["id"];
+	                _context3.next = 36;
+	                return walkToIdentifiedObject(soughtId);
+
+	              case 36:
+	                nextQuery = _context3.sent;
+	                _context3.next = 68;
+	                break;
+
+	              case 39:
 	                if (!("query" in step)) {
-	                  _context2.next = 36;
+	                  _context3.next = 46;
 	                  break;
 	                }
 
@@ -2312,97 +2567,280 @@
 	                queryResult = temporaryQuery.query(step.query);
 	                queryParent = queryResult && queryResult.parent();
 	                nextQuery = queryParent && initializeQueryForWalking(queryParent.json());
-	                _context2.next = 37;
+	                _context3.next = 68;
 	                break;
 
-	              case 36:
+	              case 46:
+	                if (!("template" in step)) {
+	                  _context3.next = 67;
+	                  break;
+	                }
+
+	                template = step["template"];
+	                _template$split$map = template.split(",").map(function (x) {
+	                  return x && x.trim();
+	                }), _template$split$map2 = _slicedToArray(_template$split$map, 2), templatePath = _template$split$map2[0], templateArguments = _template$split$map2[1];
+	                _context3.prev = 49;
+	                _context3.next = 52;
+	                return expandTemplate(templatePath, templateArguments, {
+	                  pathContext: pathContext,
+	                  query: query
+	                });
+
+	              case 52:
+	                expandedTemplate = _context3.sent;
+	                _context3.t0 = expandedTemplate;
+
+	                if (!_context3.t0) {
+	                  _context3.next = 58;
+	                  break;
+	                }
+
+	                _context3.next = 57;
+	                return walkToIdentifiedObject(expandedTemplate);
+
+	              case 57:
+	                _context3.t0 = _context3.sent;
+
+	              case 58:
+	                nextQuery = _context3.t0;
+	                _context3.next = 65;
+	                break;
+
+	              case 61:
+	                _context3.prev = 61;
+	                _context3.t1 = _context3["catch"](49);
+	                err = _context3.t1;
+	                nextQuery = undefined;
+
+	              case 65:
+	                _context3.next = 68;
+	                break;
+
+	              case 67:
 	                throw new Error("Unhandled step: " + JSON.stringify(step));
 
-	              case 37:
+	              case 68:
 	                query = nextQuery;
-	                _context2.next = 11;
+	                _context3.next = 13;
 	                break;
 
-	              case 40:
+	              case 71:
 	                if (!(!suppressFinalDereferencing && query && query.query)) {
-	                  _context2.next = 49;
+	                  _context3.next = 80;
 	                  break;
 	                }
 
 	                finalId = query.query("> @id");
 
 	                if (!(finalId && finalId !== lastFetched)) {
-	                  _context2.next = 49;
+	                  _context3.next = 80;
 	                  break;
 	                }
 
-	                _context2.next = 45;
+	                _context3.next = 76;
 	                return URLtoQuery(finalId);
 
-	              case 45:
-	                _context2.t0 = _context2.sent;
+	              case 76:
+	                _context3.t2 = _context3.sent;
 
-	                if (_context2.t0) {
-	                  _context2.next = 48;
+	                if (_context3.t2) {
+	                  _context3.next = 79;
 	                  break;
 	                }
 
-	                _context2.t0 = query;
+	                _context3.t2 = query;
 
-	              case 48:
-	                query = _context2.t0;
+	              case 79:
+	                query = _context3.t2;
 
-	              case 49:
+	              case 80:
+	                succeeded = !!query;
 	                result = {
 	                  walked: walkTo.slice(0, stepCount),
 	                  toQuery: function toQuery(maybeContext) {
 	                    return query && ld(query.json(), maybeContext || {});
 	                  },
 	                  continueTo: function continueTo(nextWalkTo, nextOptions) {
-	                    return query ? executeWalk(_objectSpread2({}, nextOptions, {
+	                    return succeeded ? executeWalk(_objectSpread2({}, nextOptions, {
 	                      pathContext: pathContext,
 	                      walkTo: nextWalkTo,
 	                      lastFetched: lastFetched,
 	                      query: query
 	                    })) : result;
 	                  },
-	                  succeeded: !!query
+	                  succeeded: succeeded,
+	                  viaTemplate: function viaTemplate(prop, args) {
+	                    return succeeded ? expandTemplateAndWalk(prop, args, {
+	                      pathContext: pathContext,
+	                      lastFetched: lastFetched,
+	                      query: query
+	                    }) : result;
+	                  }
 	                };
+
+	                if (err) {
+	                  result.err = {
+	                    message: err.message,
+	                    json: bookmarkedQuery ? bookmarkedQuery.json() : null
+	                  };
+	                }
 
 	                if (!result.succeeded) {
 	                  result.notWalked = walkTo.slice(stepCount);
 	                }
 
-	                return _context2.abrupt("return", result);
+	                return _context3.abrupt("return", result);
 
-	              case 52:
+	              case 85:
 	              case "end":
-	                return _context2.stop();
+	                return _context3.stop();
 	            }
 	          }
-	        }, _callee2);
+	        }, _callee3, null, [[49, 61]]);
 	      }));
 	      return _executeWalk.apply(this, arguments);
 	    }
 
-	    function parseQuery(term) {
-	      if (!(term && term.startsWith("query["))) return;
-	      if (!term.endsWith("]")) return;
-	      return {
-	        "http://__ldwalk/query": term.substring(6, term.length - 1)
-	      };
+	    function expandTemplateAndWalk(_x3, _x4, _x5) {
+	      return _expandTemplateAndWalk.apply(this, arguments);
 	    }
 
-	    function expandWalkToSteps(_x3, _x4) {
+	    function _expandTemplateAndWalk() {
+	      _expandTemplateAndWalk = _asyncToGenerator(regeneratorRuntime.mark(function _callee4(templatePath, templateArgs, walkArgs) {
+	        var expandedTemplate, _query;
+
+	        return regeneratorRuntime.wrap(function _callee4$(_context4) {
+	          while (1) {
+	            switch (_context4.prev = _context4.next) {
+	              case 0:
+	                _context4.prev = 0;
+	                _context4.next = 3;
+	                return expandTemplate(templatePath, templateArgs, walkArgs);
+
+	              case 3:
+	                expandedTemplate = _context4.sent;
+	                return _context4.abrupt("return", executeWalk(_objectSpread2({}, walkArgs, {
+	                  walkTo: ["id[".concat(expandedTemplate, "]")]
+	                })));
+
+	              case 7:
+	                _context4.prev = 7;
+	                _context4.t0 = _context4["catch"](0);
+	                _query = walkArgs && walkArgs.query;
+	                return _context4.abrupt("return", {
+	                  succeeded: false,
+	                  err: {
+	                    message: _context4.t0.message,
+	                    json: _query ? _query.json() : null
+	                  }
+	                });
+
+	              case 11:
+	              case "end":
+	                return _context4.stop();
+	            }
+	          }
+	        }, _callee4, null, [[0, 7]]);
+	      }));
+	      return _expandTemplateAndWalk.apply(this, arguments);
+	    }
+
+	    function expandTemplate(_x6, _x7, _x8) {
+	      return _expandTemplate.apply(this, arguments);
+	    }
+
+	    function _expandTemplate() {
+	      _expandTemplate = _asyncToGenerator(regeneratorRuntime.mark(function _callee5(templatePath, templateArgs, _ref5) {
+	        var pathContext, query, expandedTemplatePath, templateTerm, template, expandedTemplate;
+	        return regeneratorRuntime.wrap(function _callee5$(_context5) {
+	          while (1) {
+	            switch (_context5.prev = _context5.next) {
+	              case 0:
+	                pathContext = _ref5.pathContext, query = _ref5.query;
+
+	                if (query) {
+	                  _context5.next = 3;
+	                  break;
+	                }
+
+	                throw new Error("No query object during template expansion");
+
+	              case 3:
+	                if (templatePath) {
+	                  _context5.next = 5;
+	                  break;
+	                }
+
+	                throw new Error("No template path specified");
+
+	              case 5:
+	                if (typeof templateArgs === "string") templateArgs = JSON.parse(templateArgs);
+	                _context5.next = 8;
+	                return expandWalkToSteps(pathContext, [templatePath]);
+
+	              case 8:
+	                expandedTemplatePath = _context5.sent;
+
+	                if (expandedTemplatePath[0] && expandedTemplatePath[0].term) {
+	                  _context5.next = 11;
+	                  break;
+	                }
+
+	                throw new Error("Aborting - template path expansion failed (e.g. resulted in an empty string)");
+
+	              case 11:
+	                templateTerm = expandedTemplatePath[0].term;
+	                template = query.query("> ".concat(templateTerm));
+
+	                if (template) {
+	                  _context5.next = 15;
+	                  break;
+	                }
+
+	                throw new Error("Failed to locate template ".concat(templateTerm));
+
+	              case 15:
+	                if (template.query) template = template.query("@value");
+
+	                if (template) {
+	                  _context5.next = 18;
+	                  break;
+	                }
+
+	                throw new Error("Template property has no value to expand");
+
+	              case 18:
+	                expandedTemplate = urlTemplate.parse(template).expand(templateArgs);
+	                return _context5.abrupt("return", expandedTemplate);
+
+	              case 20:
+	              case "end":
+	                return _context5.stop();
+	            }
+	          }
+	        }, _callee5);
+	      }));
+	      return _expandTemplate.apply(this, arguments);
+	    }
+
+	    function parseFunctionalTerm(term) {
+	      if (!term) return;
+	      var matched = /^([^\[]+)\[(.*)\]$/.exec(term);
+	      if (!matched) return;
+	      return _defineProperty({}, "http://__ldwalk/".concat(matched[1]), matched[2]);
+	    }
+
+	    function expandWalkToSteps(_x9, _x10) {
 	      return _expandWalkToSteps.apply(this, arguments);
 	    }
 
 	    function _expandWalkToSteps() {
-	      _expandWalkToSteps = _asyncToGenerator(regeneratorRuntime.mark(function _callee3(pathContext, walkTo) {
+	      _expandWalkToSteps = _asyncToGenerator(regeneratorRuntime.mark(function _callee6(pathContext, walkTo) {
 	        var expansionDocument, expandedDocument, isGraph, compactedDocument;
-	        return regeneratorRuntime.wrap(function _callee3$(_context3) {
+	        return regeneratorRuntime.wrap(function _callee6$(_context6) {
 	          while (1) {
-	            switch (_context3.prev = _context3.next) {
+	            switch (_context6.prev = _context6.next) {
 	              case 0:
 	                expansionDocument = {
 	                  "@context": [pathContext, {
@@ -2411,24 +2849,24 @@
 	                    }
 	                  }],
 	                  "@graph": walkTo.map(function (t) {
-	                    var parsedQuery = parseQuery(t);
+	                    var parsedFunctionalTerm = parseFunctionalTerm(t);
 
-	                    if (parsedQuery) {
-	                      return parsedQuery;
-	                    } else {
-	                      return {
-	                        "http://__ldwalk/term": t
-	                      };
+	                    if (parsedFunctionalTerm) {
+	                      return parsedFunctionalTerm;
 	                    }
+
+	                    return {
+	                      "http://__ldwalk/term": t
+	                    };
 	                  })
 	                };
-	                _context3.next = 3;
+	                _context6.next = 3;
 	                return jsonld.expand(expansionDocument);
 
 	              case 3:
-	                expandedDocument = _context3.sent;
+	                expandedDocument = _context6.sent;
 	                isGraph = expandedDocument.length > 1;
-	                _context3.next = 7;
+	                _context6.next = 7;
 	                return jsonld.compact(expandedDocument, {
 	                  "@context": {
 	                    "@vocab": "http://__ldwalk/",
@@ -2440,25 +2878,25 @@
 	                });
 
 	              case 7:
-	                compactedDocument = _context3.sent;
+	                compactedDocument = _context6.sent;
 
 	                if (!isGraph) {
-	                  _context3.next = 12;
+	                  _context6.next = 12;
 	                  break;
 	                }
 
-	                return _context3.abrupt("return", compactedDocument["@graph"]);
+	                return _context6.abrupt("return", compactedDocument["@graph"]);
 
 	              case 12:
 	                delete compactedDocument["@context"];
-	                return _context3.abrupt("return", [compactedDocument]);
+	                return _context6.abrupt("return", [compactedDocument]);
 
 	              case 14:
 	              case "end":
-	                return _context3.stop();
+	                return _context6.stop();
 	            }
 	          }
-	        }, _callee3);
+	        }, _callee6);
 	      }));
 	      return _expandWalkToSteps.apply(this, arguments);
 	    }

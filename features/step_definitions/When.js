@@ -25,3 +25,11 @@ When('I continue walking to {string}', async function (path) {
     const pathBits = path.split(" ");
     this.result = await this.result.continueTo(pathBits);
 });
+
+When('I walk via template {string}', async function (prop, dataTable) {
+    if(!this.result) throw new Error("No walk started");
+    if(!this.result.succeeded) throw new Error("Walk failed before using template: " + JSON.stringify(this.result));
+    const { args } = dataTable.hashes()[0];
+    const parsedArguments = eval(`(${args})`);
+    this.result = await this.result.viaTemplate(prop, parsedArguments);
+});

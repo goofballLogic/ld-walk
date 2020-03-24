@@ -4,7 +4,7 @@ Feature: Walk and query
     So that I can query nodes normal ld-query aliases
 
     Background: Load local walk data
-        Given a walk context "walk-then-query"
+        Given a walk context "basic"
         And a query context "schema.org"
         And the api "http://test.com/local-walk"
 
