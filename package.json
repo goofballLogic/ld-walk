@@ -1,6 +1,6 @@
 {
   "name": "ld-walk",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "This library provides a few utilities to facilitate resource location within a distributed graph of JSON-LD documents",
   "main": "dist/walker.js",
   "directories": {
