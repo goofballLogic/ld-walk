@@ -28,7 +28,7 @@
     "@babel/preset-env": "^7.8.7",
     "core-js": "^3.6.4",
     "cucumber": "^6.0.5",
-    "jsonld": "^3.0.1",
+    "jsonld": "^8.1.0",
     "ld-query": "^2.6.1",
     "rollup": "^2.1.0",
     "rollup-plugin-babel": "^4.4.0",
@@ -39,7 +39,7 @@
     "url-template": "^2.0.8"
   },
   "peerDependencies": {
-    "jsonld": "^3.0.1",
+    "jsonld": "^8.1.0",
     "ld-query": "^2.6.1"
   },
   "dependencies": {}
